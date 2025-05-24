@@ -1,7 +1,7 @@
 "use client"
 
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter } from "next/navigation";
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,25 +39,20 @@ const ChatDesktopLayout = ({
 
   const ref = React.useRef<ImperativePanelHandle>(null);
 
-  const [showInfoPanel, setShowInfoPanel] = useState(false); 
+  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   
-  // Update showInfoPanel based on panel state
-  React.useEffect(() => {
-    const panel = ref.current;
-    if (panel) {
-      setShowInfoPanel(panel.isExpanded());
-    }
-  }, [ref.current, showInfoPanel]);
+  // Handle panel size changes
+  const handlePanelResize = useCallback((size: number) => {
+    setIsPanelExpanded(size > 0);
+  }, []);
 
-  // Toggle info panel
-  const toggleInfoPanel = () => setShowInfoPanel(prev=>{
+  const toggleInfoPanel = () => {
     const panel = ref.current;
     if (panel) {
       if (panel.isExpanded()) panel.collapse()
       else panel.expand();
     }
-    return !prev;
-  });
+  };
 
   const [isResizing, setIsResizing] = useState(false);
 
@@ -82,9 +77,9 @@ const ChatDesktopLayout = ({
               variant="ghost"
               size="icon"
               onClick={toggleInfoPanel}
-              className={cn(showInfoPanel && "text-primary")}
+              className={isPanelExpanded ? "text-red-500" : ""}
             >
-              <Info size={20} />
+              <Info size={20}  />
             </Button>
           </ChatHeader>
         )}
@@ -100,12 +95,15 @@ const ChatDesktopLayout = ({
           <ResizableHandle onDragging={(e) => setIsResizing(e)}/>
           
           <ResizablePanel 
-          ref={ref}
-          defaultSize={40} minSize={30} maxSize={60}
-          collapsible={true}
-          collapsedSize={0}
-          className={cn(
-            !isResizing && "transition-all duration-200 ease-out"
+            ref={ref}
+            defaultSize={40} 
+            minSize={30} 
+            maxSize={60}
+            collapsible={true}
+            collapsedSize={0}
+            onResize={handlePanelResize}
+            className={cn(
+              !isResizing && "transition-all duration-200 ease-out"
             )}
           >
             {currentChat && 

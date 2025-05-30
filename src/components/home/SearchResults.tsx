@@ -7,8 +7,8 @@ import CompanionCard from '@/components/home/CompanionCard';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar } from '@/components/ui/avatar';
-import { User } from 'lucide-react';
 import { MOCK_COMPANIONS } from '@/data/companions';
+import StableImage from '@/components/global/StableImage';
 
 // Mock tags for search results
 const RESULT_TAGS = ['Anime', 'Celebrity', 'Fantasy', 'Sci-Fi', 'Historical', 'Romance', 'Comedy'];
@@ -26,7 +26,7 @@ const MOCK_USERS = [
 const SearchResults = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get('q') || '';
+  const searchQuery = searchParams.get('q') ?? '';
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState(Object.values(MOCK_COMPANIONS).flat());
 
@@ -122,7 +122,7 @@ const SearchResults = () => {
               {MOCK_USERS.map(user => (
                 <div key={user.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent/30 transition-colors">
                   <Avatar className="h-12 w-12">
-                    <img src={user.avatar} alt={user.name} />
+                    <StableImage src={user.avatar} alt={user.name} />
                   </Avatar>
                   <div>
                     <p className="font-medium">{user.name}</p>

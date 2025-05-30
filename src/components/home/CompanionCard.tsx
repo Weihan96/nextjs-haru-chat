@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, MessageSquare } from 'lucide-react';
 import Link from "next/link";
 import { cn } from '@/lib/utils';
-
+import Image from "next/image";
 interface CompanionCardProps {
   id: string;
   name: string;
@@ -40,7 +40,7 @@ const CompanionCard = ({
   return (
     <div className={cn("companion-card group", className)}>
       <div className="relative">
-        <img src={avatar} alt={name} className="companion-card-image" />
+        <Image src={avatar} alt={name} className="companion-card-image" width={500} height={300} />
         <Button 
           size="icon" 
           variant="ghost" 

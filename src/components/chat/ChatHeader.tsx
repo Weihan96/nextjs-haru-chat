@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from "next/navigation";
 import { useIsMobile } from '@/hooks/use-mobile';
+import StableImage from '@/components/global/StableImage';
 
 interface ChatHeaderProps {
   companion?: {
@@ -37,20 +38,23 @@ const ChatHeader = ({
   }
 
   return (
-    <div className={cn("p-3 border-b border-border flex items-center justify-between bg-background sticky top-0 z-10", className)}>
-      <div className="flex items-center gap-3">
-        {isMobile && (
-          <Button variant="ghost" size="icon" onClick={handleBackToList} className="mr-1">
-            <ArrowLeft size={20} />
-          </Button>
-        )}
-        <Avatar className="h-10 w-10">
-          <img src={companion.avatar} alt={companion.name} className="object-cover" />
-        </Avatar>
-        <h2 className="font-medium">{companion.name}</h2>
+    <>
+      {isMobile && <div className="h-[65px]"/>}
+      <div className={cn("p-3 border-b border-border flex items-center justify-between", isMobile && "fixed top-0 left-0 right-0", className)}>
+        <div className="flex items-center gap-3">
+          {isMobile && (
+            <Button variant="ghost" size="icon" onClick={handleBackToList} className="mr-1">
+              <ArrowLeft size={20} />
+            </Button>
+          )}
+          <Avatar className="h-10 w-10">
+            <StableImage src={companion.avatar} alt={companion.name} className="object-cover" />
+          </Avatar>
+          <h2 className="font-medium">{companion.name}</h2>
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
+    </>
   );
 };
 

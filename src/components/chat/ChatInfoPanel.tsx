@@ -1,11 +1,8 @@
 "use client"
 
-
 import React from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-import CompanionProfile from './CompanionProfile';
 import RestartButton from './RestartButton';
 import ChatHistory from './ChatHistory';
 import ChatSettings from './ChatSettings';
@@ -25,7 +22,7 @@ interface ChatInfoPanelProps {
     description: string;
     tags: string[];
   };
-  chatHistories: any[];
+  chatHistories: ChatHistory[];
   onRestart: () => void;
   className?: string;
 }

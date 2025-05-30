@@ -52,7 +52,7 @@ const Collections = () => {
           />
         </div>
         <Tabs defaultValue="companions">
-          <div className="px-4 py-2 w-screen sticky top-0 z-[50] bg-background">          
+          <div className="px-4 py-2 w-full bg-background">          
             <TabsList className="w-full">
               <TabsTrigger value="companions" className="flex-1">Companions</TabsTrigger>
               <TabsTrigger value="history" className="flex-1">Chat History</TabsTrigger>

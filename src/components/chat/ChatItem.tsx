@@ -1,6 +1,5 @@
 "use client"
 
-
 import React from 'react';
 import Link from "next/link";
 import { Avatar } from '@/components/ui/avatar';
@@ -8,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChatPreview } from '@/types/chat';
 import { cn } from '@/lib/utils';
+import StableImage from '@/components/global/StableImage';
 
 interface ChatItemProps {
   chat: ChatPreview;
@@ -61,7 +61,7 @@ const ChatItemContent = ({ chat }: { chat: ChatPreview }) => {
   return (
     <>
       <Avatar className="h-12 w-12">
-        <img src={chat.avatar} alt={chat.name} className="object-cover" />
+        <StableImage src={chat.avatar ?? "no image"} alt={chat.name ?? "no name"} className="object-cover" />
       </Avatar>
       
       <div className="flex-1 min-w-0">

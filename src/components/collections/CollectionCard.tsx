@@ -1,6 +1,5 @@
 "use client"
 
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +7,8 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Star } from 'lucide-react';
 import Link from "next/link";
-
+import StableImage from '@/components/global/StableImage';
+import Image from "next/image";
 interface CollectionCardProps {
   id: string;
   type: 'companion' | 'message' | 'history';
@@ -22,7 +22,7 @@ interface CollectionCardProps {
 }
 
 const CollectionCard = ({
-  id,
+  id: _id,
   type,
   title,
   subtitle,
@@ -37,11 +37,10 @@ const CollectionCard = ({
       {type === 'companion' && (
         <Link href={link}>
           <div className="relative">
-            <img
+            <Image
               src={image}
               alt={title}
-              className="w-full h-40 object-cover"
-            />
+              className="w-full h-40 object-cover" width={500} height={300} />
             <div className="absolute top-2 right-2">
               <Star className="h-5 w-5 fill-primary text-primary" />
             </div>
@@ -73,7 +72,7 @@ const CollectionCard = ({
         <div className="p-3">
           <div className="flex items-center gap-2 mb-3">
             <Avatar className="h-8 w-8">
-              <img src={image} alt={title} className="object-cover" />
+              {image && <StableImage src={image} alt={title} className="object-cover" />}
             </Avatar>
             <div>
               <h3 className="font-medium">{title}</h3>
@@ -105,7 +104,7 @@ const CollectionCard = ({
             </div>
             <div className="flex items-center gap-2 mb-3">
               <Avatar className="h-8 w-8">
-                <img src={image} alt={title} className="object-cover" />
+                {image && <StableImage src={image} alt={title} className="object-cover" />}
               </Avatar>
               <span className="text-sm text-muted-foreground">{subtitle}</span>
             </div>

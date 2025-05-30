@@ -10,10 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Bell, CreditCard, LogOut, Mail, Shield, User } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import StableImage from '@/components/global/StableImage';
 
 const Profile = () => {
   // Sample usage data for the progress bar
@@ -40,7 +41,7 @@ const Profile = () => {
       <div className="h-full space-y-8">
         <div className="py-3 px-4 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8">
           <Avatar className="h-24 w-24 border-4 border-primary">
-            <img src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1" alt="User Avatar" className="object-cover" />
+            <StableImage src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1" alt="User Avatar" className="object-cover" />
           </Avatar>
           
           <div className="flex-1">
@@ -50,7 +51,7 @@ const Profile = () => {
         </div>
         
         <Tabs defaultValue="account">
-         <div className="px-4 py-2 w-screen sticky top-0 z-[50] bg-background">          
+         <div className="px-4 py-2 w-full bg-background">          
             <TabsList className="grid grid-cols-3 md:grid-cols-4 w-full">
               <TabsTrigger value="account">Account</TabsTrigger>
               <TabsTrigger value="subscription">Subscription</TabsTrigger>

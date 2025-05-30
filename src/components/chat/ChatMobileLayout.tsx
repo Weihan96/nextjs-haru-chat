@@ -1,8 +1,8 @@
 "use client"
 
-
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from "next/navigation";
+import { ChatMessage, ChatPreview } from '@/types/chat';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import ChatInfoPanel from '@/components/chat/ChatInfoPanel';
@@ -21,9 +21,9 @@ interface ChatMobileLayoutProps {
     description: string;
     tags: string[];
   } | null;
-  currentMessages: any[];
+  currentMessages: ChatMessage[];
   chatId: string | undefined;
-  chatHistories: any[];
+  chatHistories: ChatPreview[];
 }
 
 const ChatMobileLayout = ({ 
@@ -53,10 +53,12 @@ const ChatMobileLayout = ({
             </Button>
           </DrawerTrigger>
         </ChatHeader>
-        <ChatWindow
-          companion={currentChat}
-          initialMessages={currentMessages}
-        />
+        <div className='flex-1 overflow-hidden'>
+          <ChatWindow
+            companion={currentChat}
+            initialMessages={currentMessages}
+          />
+        </div>
       </div>
       <DrawerContent>
         <div className="h-[80vh] max-h-[80vh] overflow-scroll overscroll-contain">

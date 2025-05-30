@@ -117,7 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   )
 }
 
-export function MobileSidebar() {
+export function MobileNavbar() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
   
@@ -132,24 +132,27 @@ export function MobileSidebar() {
     return null;
   }
   return (
-    <div className="sticky bottom-0 bg-background border-t border-border z-[55]">
-      <nav className="flex justify-around items-center">
-        {data.nav.map((item) => (
-          <Link
-            key={item.url}
-            href={item.url}
-            className={cn(
-              "flex flex-col items-center p-2 text-sm rounded-md transition-colors",
-              pathname === item.url 
-                ? "text-primary" 
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <item.icon size={20} />
-            <span className="mt-1 text-xs">{item.name}</span>
-          </Link>
-        ))}
-      </nav>
-    </div>
+    <>
+      <div className="h-[56px]"/>
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-[55]">
+        <nav className="flex justify-around items-center">
+          {data.nav.map((item) => (
+            <Link
+              key={item.url}
+              href={item.url}
+              className={cn(
+                "flex flex-col items-center p-2 text-sm rounded-md transition-colors",
+                pathname === item.url 
+                  ? "text-primary" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon size={20} />
+              <span className="mt-1 text-xs">{item.name}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </>
   )
 }

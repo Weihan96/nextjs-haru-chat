@@ -18,6 +18,7 @@ import ChatSearch from './ChatSearch';
 import ChatItem from './ChatItem';
 import ChatManageMode from './ChatManageMode';
 import ChatDeleteDialog from './ChatDeleteDialog';
+import { useSyncWidth } from '@/hooks/use-sync-width';
 
 interface ChatListProps {
   chats: ChatPreview[];
@@ -108,7 +109,7 @@ const ChatList = ({ chats, className }: ChatListProps) => {
     } else {
       setFilteredChats(chats);
     }
-  }, [chats]);
+  }, [chats, searchQuery, handleSearch]);
 
   // Update selectAll state when selectedChats changes
   useEffect(() => {
@@ -117,11 +118,13 @@ const ChatList = ({ chats, className }: ChatListProps) => {
     } else if (selectAll && selectedChats.length !== filteredChats.length) {
       setSelectAll(false);
     }
-  }, [selectedChats, filteredChats]);
+  }, [selectedChats, filteredChats, selectAll]);
   
+  const {sourceRef, targetRef} = useSyncWidth<HTMLDivElement, HTMLDivElement>();
+
   return (
-    <div className={cn("flex flex-col border-r border-border h-full", className)}>
-      <div className="px-4 py-3 border-b border-border sticky top-0 bg-background z-[60]">
+    <div className={cn("flex flex-col h-full", className)}>
+      <div ref={sourceRef} className="px-4 py-3 border-b border-border bg-background">
         {!isManageMode ? (
           <div className="flex items-center gap-2">
             <ChatSearch 
@@ -157,7 +160,7 @@ const ChatList = ({ chats, className }: ChatListProps) => {
       </div>
       
       <ScrollArea className="flex-1 overscroll-contain">
-        <div className="divide-y divide-border">
+        <div ref={targetRef} className="divide-y divide-border">
           {filteredChats.length > 0 ? (
             filteredChats.map((chat) => (
               <div key={chat.id} className="relative">
@@ -177,7 +180,7 @@ const ChatList = ({ chats, className }: ChatListProps) => {
           )}
         </div>
       </ScrollArea>
-
+         
       <ChatDeleteDialog 
         isOpen={deleteDialogOpen}
         selectedCount={selectedChats.length}

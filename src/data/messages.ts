@@ -1,6 +1,4 @@
-
-import { COMPANION_BY_ID } from './companions';
-import { Message, ChatMessage, ChatPreview } from '@/types/chat';
+import { ChatMessage, ChatPreview } from '@/types/chat';
 
 export const MOCK_CHATS: ChatPreview[] = [
   {

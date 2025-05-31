@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar } from '@/components/ui/avatar';
 import { MOCK_COMPANIONS } from '@/data/companions';
-import StableImage from '@/components/global/StableImage';
+import Image from "next/image";
 
 // Mock tags for search results
 const RESULT_TAGS = ['Anime', 'Celebrity', 'Fantasy', 'Sci-Fi', 'Historical', 'Romance', 'Comedy'];
@@ -70,7 +70,7 @@ const SearchResults = () => {
       />
       
       <div className="px-4 py-5">
-        <h1 className="text-2xl font-bold mb-4">Results for "{searchQuery}"</h1>
+        <h1 className="text-2xl font-bold mb-4">Results for &ldquo;{searchQuery}&rdquo;</h1>
         
         <Tabs defaultValue="companions" className="w-full">
           <TabsList className="mb-6">
@@ -122,7 +122,7 @@ const SearchResults = () => {
               {MOCK_USERS.map(user => (
                 <div key={user.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent/30 transition-colors">
                   <Avatar className="h-12 w-12">
-                    <StableImage src={user.avatar} alt={user.name} />
+                    <Image src={user.avatar} alt={user.name} width={48} height={48}/>
                   </Avatar>
                   <div>
                     <p className="font-medium">{user.name}</p>

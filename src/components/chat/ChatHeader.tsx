@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from "next/navigation";
 import { useIsMobile } from '@/hooks/use-mobile';
-import StableImage from '@/components/global/StableImage';
+import Image from "next/image";
 
 interface ChatHeaderProps {
   companion?: {
@@ -48,7 +48,7 @@ const ChatHeader = ({
             </Button>
           )}
           <Avatar className="h-10 w-10">
-            <StableImage src={companion.avatar} alt={companion.name} className="object-cover" />
+            <Image src={companion.avatar} alt={companion.name} className="object-cover" width={40} height={40} />
           </Avatar>
           <h2 className="font-medium">{companion.name}</h2>
         </div>

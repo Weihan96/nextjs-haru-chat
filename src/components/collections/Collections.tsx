@@ -11,21 +11,34 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import Link from "next/link";
 
+type FilterableItem = {
+  id: string;
+  name?: string;
+  description?: string;
+  title?: string;
+  content?: string;
+  avatar?: string;
+  tags?: string[];
+  image?: string;
+  subtitle?: string;
+  timestamp?: string;
+};
+
 const Collections = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
-  const filterItems = (items: any[], query: string) => {
+  const filterItems = (items: FilterableItem[], query: string) => {
     if (!query.trim()) return items;
     
     return items.filter(item => {
-      if ('name' in item) {
+      if (item.name && item.description) {
         return item.name.toLowerCase().includes(query.toLowerCase()) ||
                item.description.toLowerCase().includes(query.toLowerCase());
       }
       
-      if ('title' in item) {
+      if (item.title) {
         return item.title.toLowerCase().includes(query.toLowerCase()) ||
-               item.content?.toLowerCase().includes(query.toLowerCase());
+               (item.content && item.content.toLowerCase().includes(query.toLowerCase()));
       }
       
       return false;
@@ -71,10 +84,10 @@ const Collections = () => {
                         key={companion.id}
                         id={companion.id}
                         type="companion"
-                        title={companion.name}
-                        subtitle={companion.description}
-                        image={companion.avatar}
-                        tags={companion.tags}
+                        title={companion.name!}
+                        subtitle={companion.description!}
+                        image={companion.avatar!}
+                        tags={companion.tags!}
                         link={`/chat/${companion.id}`}
                       />
                     ))}
@@ -103,10 +116,10 @@ const Collections = () => {
                           key={companion.id}
                           id={companion.id}
                           type="companion"
-                          title={companion.name}
-                          subtitle={companion.description}
-                          image={companion.avatar}
-                          tags={companion.tags}
+                          title={companion.name!}
+                          subtitle={companion.description!}
+                          image={companion.avatar!}
+                          tags={companion.tags!}
                           link={`/chat/${companion.id}`}
                         />
                       ))}
@@ -124,10 +137,10 @@ const Collections = () => {
                           key={companion.id}
                           id={companion.id}
                           type="companion"
-                          title={companion.name}
-                          subtitle={companion.description}
-                          image={companion.avatar}
-                          tags={companion.tags}
+                          title={companion.name!}
+                          subtitle={companion.description!}
+                          image={companion.avatar!}
+                          tags={companion.tags!}
                           link={`/chat/${companion.id}`}
                         />
                       ))}
@@ -152,11 +165,11 @@ const Collections = () => {
                     key={history.id}
                     id={history.id}
                     type="history"
-                    title={history.title}
-                    subtitle={history.subtitle}
-                    image={history.image}
-                    content={history.content}
-                    timestamp={history.timestamp}
+                    title={history.title!}
+                    subtitle={history.subtitle!}
+                    image={history.image!}
+                    content={history.content!}
+                    timestamp={history.timestamp!}
                     link={`/chat/1?history=${history.id}`}
                   />
                 ))}
@@ -178,10 +191,10 @@ const Collections = () => {
                     key={message.id}
                     id={message.id}
                     type="message"
-                    title={message.title}
-                    image={message.image}
-                    content={message.content}
-                    timestamp={message.timestamp}
+                    title={message.title!}
+                    image={message.image!}
+                    content={message.content!}
+                    timestamp={message.timestamp!}
                     link={`/chat/1?message=${message.id}`}
                   />
                 ))}

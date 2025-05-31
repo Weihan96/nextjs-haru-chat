@@ -8,9 +8,9 @@ import { Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Message } from '@/types/chat';
 import { useIsMobile } from '@/hooks/use-mobile';
-import StableImage from '@/components/global/StableImage';
 import ChatInput from './ChatInput';
 import Image from "next/image";
+
 interface ChatWindowProps {
   companion?: {
     id: string;
@@ -95,7 +95,7 @@ const ChatWindow = ({ companion, initialMessages, className }: ChatWindowProps) 
                 <div className="flex gap-2">
                   {!message.isUser && (
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                      <StableImage src={companion.avatar} alt={companion.name} className="object-cover" />
+                      <Image src={companion.avatar} alt={companion.name} className="object-cover" width={32} height={32}/>
                     </Avatar>
                   )}
                   <div className="flex-1 space-y-1 overflow-hidden">

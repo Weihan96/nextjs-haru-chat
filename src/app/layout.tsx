@@ -10,7 +10,7 @@ import {
   SidebarInset, 
   SidebarProvider,
 } from '@/components/ui/sidebar';
-import { AppSidebar, MobileSidebar } from "@/components/layout/app-sidebar"
+import { AppSidebar, MobileNavbar } from "@/components/layout/app-sidebar"
 
 import { Metadata } from "next";
 
@@ -38,7 +38,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // const defaultOpen = Cookies.get("sidebar_state") === "true";
   const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
   return (
@@ -60,7 +59,7 @@ export default async function RootLayout({
                 </div>
               
                 {/* Mobile bottom navigation */}
-                <MobileSidebar />
+                <MobileNavbar />
               </div>
             </SidebarInset>
           </SidebarProvider>

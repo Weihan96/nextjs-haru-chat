@@ -101,7 +101,7 @@ const ChatDesktopLayout = ({
               )}
             >
               
-              <ScrollArea className='h-full overscroll-contain'>
+              <ScrollArea className='h-full'>
                 {/* Companion Profile */}
                 <CompanionProfile className='p-4' companion={currentChat}/>
                 <p className="px-4 text-sm font-normal text-muted-foreground">{currentChat.description}</p>

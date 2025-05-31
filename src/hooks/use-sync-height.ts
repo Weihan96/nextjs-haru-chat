@@ -8,13 +8,13 @@ export function useSyncHeight<
 >(
   debounceDelay: number = 10,
 ): {
-  sourceRef: React.RefObject<S>, // Source element ref (more generic)
-  targetRef: React.RefObject<T>, // Target element ref (more generic)
+  sourceRef: React.RefObject<S | null>, // Source element ref (more generic)
+  targetRef: React.RefObject<T | null>, // Target element ref (more generic)
   height: number // Current synced height
 } {
   const [height, setHeight] = React.useState<number>(0);
-  const sourceRef = React.useRef<S>(null);
-  const targetRef = React.useRef<T>(null);
+  const sourceRef = React.useRef<S | null>(null);
+  const targetRef = React.useRef<T | null>(null);
   
   // Use debounced callback to avoid rapid updates
   const syncHeight = useDebounceCallback(() => {

@@ -123,5 +123,6 @@ const ChatInputImpl = React.forwardRef<HTMLDivElement, ChatInputImplProps>(
   }
 );
 
+ChatInputImpl.displayName = "ChatInputImpl";
 
 export default ChatInput;

@@ -3,7 +3,7 @@ import React from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import StableImage from '@/components/global/StableImage';
+import Image from "next/image";
 
 interface CompanionProfileProps {
   companion: {
@@ -23,7 +23,7 @@ const CompanionProfile = ({
   return (
       <div className={cn("flex items-center gap-3", className)}>
         <Avatar className="h-16 w-16">
-          <StableImage src={companion.avatar} alt={companion.name} className="object-cover" />
+          <Image src={companion.avatar} alt={companion.name} className="object-cover" width={64} height={64}/>
         </Avatar>
         <div>
           <h2 className="text-xl font-bold">{companion.name}</h2>

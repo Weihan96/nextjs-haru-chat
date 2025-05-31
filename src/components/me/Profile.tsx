@@ -14,7 +14,7 @@ import { CreditCard } from 'lucide-react';
 import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import StableImage from '@/components/global/StableImage';
+import Image from "next/image";
 
 const Profile = () => {
   // Sample usage data for the progress bar
@@ -41,7 +41,7 @@ const Profile = () => {
       <div className="h-full space-y-8">
         <div className="py-3 px-4 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8">
           <Avatar className="h-24 w-24 border-4 border-primary">
-            <StableImage src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1" alt="User Avatar" className="object-cover" />
+            <Image src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1" alt="User Avatar" className="object-cover" width={96} height={96}/>
           </Avatar>
           
           <div className="flex-1">

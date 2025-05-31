@@ -116,7 +116,34 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .companion-card {
+    @apply relative bg-gradient-to-br from-secondary to-secondary/70 rounded-xl overflow-hidden shadow-lg transition-transform hover:scale-[1.02];
+  }
+  
+  .companion-card-image {
+    @apply aspect-[3/4] w-full object-cover;
+  }
+  
+  .companion-card-content {
+    @apply p-3 flex flex-col gap-1;
+  }
+  
+  .chat-bubble {
+    @apply w-fit max-w-[80%] p-3 rounded-2xl mb-2;
+  }
+  
+  .chat-bubble-user {
+    @apply bg-primary/20 ml-auto;
+  }
+  
+  .chat-bubble-ai {
+    @apply bg-secondary mr-auto;
   }
 }

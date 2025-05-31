@@ -10,7 +10,7 @@ import {
   SidebarInset, 
   SidebarProvider,
 } from '@/components/ui/sidebar';
-import { AppSidebar, MobileSidebar } from "@/components/layout/app-sidebar"
+import { AppSidebar, MobileNavbar } from "@/components/layout/app-sidebar"
 
 import { Metadata } from "next";
 
@@ -60,7 +60,7 @@ export default async function RootLayout({
                 </div>
               
                 {/* Mobile bottom navigation */}
-                <MobileSidebar />
+                <MobileNavbar />
               </div>
             </SidebarInset>
           </SidebarProvider>

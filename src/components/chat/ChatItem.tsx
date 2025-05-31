@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChatPreview } from '@/types/chat';
 import { cn } from '@/lib/utils';
-import StableImage from '@/components/global/StableImage';
+import Image from "next/image";
 
 interface ChatItemProps {
   chat: ChatPreview;
@@ -61,7 +61,7 @@ const ChatItemContent = ({ chat }: { chat: ChatPreview }) => {
   return (
     <>
       <Avatar className="h-12 w-12">
-        <StableImage src={chat.avatar ?? "no image"} alt={chat.name ?? "no name"} className="object-cover" />
+        <Image src={chat.avatar ?? "placeholder.svg"} alt={chat.name ?? "no name"} className="object-cover" width={48} height={48}/>
       </Avatar>
       
       <div className="flex-1 min-w-0">

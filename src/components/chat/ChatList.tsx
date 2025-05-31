@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MoreVertical, Settings } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ const ChatList = ({ chats, className }: ChatListProps) => {
   const [selectAll, setSelectAll] = useState(false);
   
   // Handle search functionality
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
     
@@ -50,7 +50,7 @@ const ChatList = ({ chats, className }: ChatListProps) => {
     );
     
     setFilteredChats(filtered);
-  };
+  }, [chats]);
 
   const toggleManageMode = () => {
     if (isManageMode) {

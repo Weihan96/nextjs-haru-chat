@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { ClerkProvider } from '@clerk/nextjs'
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -41,31 +42,33 @@ export default async function RootLayout({
   const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
   return (
-    <html lang="en">
-      <body
-        suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <TooltipProvider>
-          <SidebarProvider defaultOpen={defaultOpen}>
-            <AppSidebar />
+    <ClerkProvider>
+      <html lang="en">
+        <body
+          suppressHydrationWarning
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <TooltipProvider>
+            <SidebarProvider defaultOpen={defaultOpen}>
+              <AppSidebar />
 
-            {/* Main content with inset */}
-            <SidebarInset>
-              {/* Main content */}
-              <div className="flex flex-col h-screen">
-                <div className="flex-1 overflow-hidden">
-                  {children}
+              {/* Main content with inset */}
+              <SidebarInset>
+                {/* Main content */}
+                <div className="flex flex-col h-screen">
+                  <div className="flex-1 overflow-hidden">
+                    {children}
+                  </div>
+                
+                  {/* Mobile bottom navigation */}
+                  <MobileNavbar />
                 </div>
-              
-                {/* Mobile bottom navigation */}
-                <MobileNavbar />
-              </div>
-            </SidebarInset>
-          </SidebarProvider>
-          <Toaster />
-        </TooltipProvider>
-      </body>
-    </html>
+              </SidebarInset>
+            </SidebarProvider>
+            <Toaster />
+          </TooltipProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

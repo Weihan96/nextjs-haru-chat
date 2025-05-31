@@ -1,4 +1,3 @@
-
 import Home from "@/components/home/Home";
 
 // This would be the actual page component in Next.js

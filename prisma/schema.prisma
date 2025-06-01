@@ -14,52 +14,232 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// User model to integrate with Clerk
-model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Enums for better type safety
+enum ChatType {
+  PRIVATE
+  GROUP
+  CHANNEL
+  SAVED_MESSAGES
+}
 
-  // Relations for chat functionality
-  chats     Chat[]
-  messages  Message[]
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+  GIF
+  VOICE
+  VIDEO_NOTE
+  LOCATION
+  CONTACT
+  POLL
+  SYSTEM
+}
+
+enum MessageStatus {
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum ChatMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  RESTRICTED
+  LEFT
+  KICKED
+}
+
+enum ChatMemberStatus {
+  ACTIVE
+  MUTED
+  BANNED
+  LEFT
+}
+
+// Enhanced User model with Telegram-like features
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  email       String   @unique
+  username    String?  @unique
+  firstName   String?
+  lastName    String?
+  bio         String?
+  imageUrl    String?
+  phoneNumber String?
+  isBot       Boolean  @default(false)
+  isVerified  Boolean  @default(false)
+  lastSeen    DateTime?
+  isOnline    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ownedChats         Chat[]          @relation("ChatOwner")
+  chatMembers        ChatMember[]
+  sentMessages       Message[]       @relation("MessageSender")
+  messageReactions   MessageReaction[]
+  readReceipts       ReadReceipt[]
+  forwardedMessages  Message[]       @relation("MessageForwarder")
+  editedMessages     MessageEdit[]
 
   @@map("users")
 }
 
-// Chat model for managing conversations
+// Enhanced Chat model with different types
 model Chat {
-  id        String   @id @default(cuid())
-  title     String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  type        ChatType
+  title       String?
+  description String?
+  imageUrl    String?
+  username    String?  @unique // For public channels/groups
+  inviteLink  String?  @unique
+  ownerId     String?
+  isPublic    Boolean  @default(false)
+  isMuted     Boolean  @default(false)
+  isPinned    Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+  memberLimit Int?     // For groups/channels
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages Message[]
+  owner       User?         @relation("ChatOwner", fields: [ownerId], references: [id])
+  members     ChatMember[]
+  messages    Message[]
 
   @@map("chats")
 }
 
-// Message model for storing chat messages
-model Message {
-  id        String   @id @default(cuid())
-  content   String
-  role      String   // 'user' or 'assistant'
+// Chat membership with roles and permissions
+model ChatMember {
+  id        String           @id @default(cuid())
   chatId    String
   userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      ChatMemberRole   @default(MEMBER)
+  status    ChatMemberStatus @default(ACTIVE)
+  joinedAt  DateTime         @default(now())
+  leftAt    DateTime?
+  mutedUntil DateTime?
+  
+  // Permissions
+  canSendMessages    Boolean @default(true)
+  canSendMedia       Boolean @default(true)
+  canAddMembers      Boolean @default(false)
+  canPinMessages     Boolean @default(false)
+  canDeleteMessages  Boolean @default(false)
+  canEditChat        Boolean @default(false)
 
   // Relations
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([chatId, userId])
+  @@map("chat_members")
+}
+
+// Enhanced Message model with Telegram features
+model Message {
+  id            String        @id @default(cuid())
+  content       String?
+  type          MessageType   @default(TEXT)
+  status        MessageStatus @default(SENDING)
+  chatId        String
+  senderId      String
+  replyToId     String?       // For threaded messages
+  forwardedFromId String?     // Original sender for forwarded messages
+  isEdited      Boolean       @default(false)
+  isDeleted     Boolean       @default(false)
+  isPinned      Boolean       @default(false)
+  scheduledAt   DateTime?     // For scheduled messages
+  expiresAt     DateTime?     // For disappearing messages
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  chat              Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender            User              @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo           Message?          @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies           Message[]         @relation("MessageReplies")
+  forwardedFrom     User?             @relation("MessageForwarder", fields: [forwardedFromId], references: [id])
+  attachments       MessageAttachment[]
+  reactions         MessageReaction[]
+  readReceipts      ReadReceipt[]
+  edits            MessageEdit[]
+
   @@map("messages")
+}
+
+// File attachments for messages
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  fileName  String
+  fileUrl   String
+  fileType  String   // MIME type
+  fileSize  Int      // Size in bytes
+  width     Int?     // For images/videos
+  height    Int?     // For images/videos
+  duration  Int?     // For audio/video
+  thumbnail String?  // Thumbnail URL for media
+  createdAt DateTime @default(now())
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
+}
+
+// Message reactions (like/dislike, emojis)
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String   // Emoji or reaction type
+  createdAt DateTime @default(now())
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+// Read receipts for message delivery status
+model ReadReceipt {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("read_receipts")
+}
+
+// Message edit history
+model MessageEdit {
+  id          String   @id @default(cuid())
+  messageId   String
+  userId      String
+  oldContent  String
+  newContent  String
+  editedAt    DateTime @default(now())
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("message_edits")
 }

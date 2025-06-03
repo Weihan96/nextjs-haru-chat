@@ -14,181 +14,145 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Enums for better type safety
-enum ChatType {
-  PRIVATE
-  GROUP
-  CHANNEL
-  SAVED_MESSAGES
-}
+// =============================================================================
+// CORE CHAT SYSTEM - AI Companion Chat Platform
+// =============================================================================
 
-enum MessageType {
-  TEXT
-  IMAGE
-  VIDEO
-  AUDIO
-  DOCUMENT
-  STICKER
-  GIF
-  VOICE
-  VIDEO_NOTE
-  LOCATION
-  CONTACT
-  POLL
-  SYSTEM
-}
-
-enum MessageStatus {
-  SENDING
-  SENT
-  DELIVERED
-  READ
-  FAILED
-}
-
-enum ChatMemberRole {
-  OWNER
-  ADMIN
-  MEMBER
-  RESTRICTED
-  LEFT
-  KICKED
-}
-
-enum ChatMemberStatus {
-  ACTIVE
-  MUTED
-  BANNED
-  LEFT
-}
-
-// Enhanced User model with Telegram-like features
+// User model with Clerk integration
 model User {
   id          String   @id @default(cuid())
   clerkId     String   @unique
   email       String   @unique
   username    String?  @unique
-  firstName   String?
-  lastName    String?
+  displayName String?  // Single display name instead of first/last
   bio         String?
   imageUrl    String?
-  phoneNumber String?
-  isBot       Boolean  @default(false)
-  isVerified  Boolean  @default(false)
-  lastSeen    DateTime?
+  credits     Int      @default(0) // AI usage credits
   isOnline    Boolean  @default(false)
+  lastSeen    DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
-  ownedChats         Chat[]          @relation("ChatOwner")
-  chatMembers        ChatMember[]
-  sentMessages       Message[]       @relation("MessageSender")
-  messageReactions   MessageReaction[]
-  readReceipts       ReadReceipt[]
-  forwardedMessages  Message[]       @relation("MessageForwarder")
-  editedMessages     MessageEdit[]
+  // Core chat relations
+  chats            Chat[]
+  sentMessages     Message[]       @relation("MessageSender")
+  createdCompanions Companion[]    @relation("CompanionCreator")
+  editedMessages   MessageEdit[]
+  chatCheckpoints  ChatCheckpoint[] @relation("CheckpointCreator")
+  userPersonas     UserPersona[]   // User's personas/roles
+
+  // Social system relations
+  socialMessageReactions  SocialMessageReaction[]
+  socialCompanionReactions SocialCompanionReaction[]
+  socialReactionsGiven   SocialUserReaction[]  @relation("SocialUserReactionsGiven")
+  socialReactionsReceived SocialUserReaction[] @relation("SocialUserReactionsReceived")
+  
+  // Operations system relations
+  submittedReports OpsReport[]
 
   @@map("users")
 }
 
-// Enhanced Chat model with different types
-model Chat {
+// User personas for different AI interaction contexts
+model UserPersona {
   id          String   @id @default(cuid())
-  type        ChatType
-  title       String?
-  description String?
-  imageUrl    String?
-  username    String?  @unique // For public channels/groups
-  inviteLink  String?  @unique
-  ownerId     String?
-  isPublic    Boolean  @default(false)
-  isMuted     Boolean  @default(false)
-  isPinned    Boolean  @default(false)
-  isArchived  Boolean  @default(false)
-  memberLimit Int?     // For groups/channels
+  userId      String
+  roleName    String   // e.g., "Professional", "Friend", "Student", "Adventurer"
+  description String   // Background info for AI to understand this persona
+  isDefault   Boolean  @default(false) // User's default persona
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  owner       User?         @relation("ChatOwner", fields: [ownerId], references: [id])
-  members     ChatMember[]
-  messages    Message[]
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats Chat[] // Chats where this persona is used
+
+  @@map("user_personas")
+}
+
+// AI Companion model - separate from User for clarity
+model Companion {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  imageUrl        String?
+  imageSet        String[] // Multiple images for variety
+  systemPrompt    String   // AI personality and behavior
+  startMessage    String   // Initial greeting message
+  generationConfig Json    // AI generation parameters (temperature, etc.)
+  isPublic        Boolean  @default(false) // Can be shared as template
+  creatorId       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Core chat relations
+  creator     User         @relation("CompanionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+  
+  // Social system relations
+  socialReactions   SocialCompanionReaction[]
+
+  @@map("companions")
+}
+
+// Chat model for AI companion conversations
+model Chat {
+  id            String   @id @default(cuid())
+  title         String?  // User can customize chat title
+  userId        String
+  companionId   String   // Every chat must have a companion
+  userPersonaId String?  // Optional: which persona user is using
+  isDeleted     Boolean  @default(false) // Soft deletion for analytics
+  deletedAt     DateTime? // When chat was deleted
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Core chat relations
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companion    Companion        @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  userPersona  UserPersona?     @relation(fields: [userPersonaId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  checkpoints  ChatCheckpoint[] // Checkpoints referencing this chat
 
   @@map("chats")
 }
 
-// Chat membership with roles and permissions
-model ChatMember {
-  id        String           @id @default(cuid())
-  chatId    String
-  userId    String
-  role      ChatMemberRole   @default(MEMBER)
-  status    ChatMemberStatus @default(ACTIVE)
-  joinedAt  DateTime         @default(now())
-  leftAt    DateTime?
-  mutedUntil DateTime?
-  
-  // Permissions
-  canSendMessages    Boolean @default(true)
-  canSendMedia       Boolean @default(true)
-  canAddMembers      Boolean @default(false)
-  canPinMessages     Boolean @default(false)
-  canDeleteMessages  Boolean @default(false)
-  canEditChat        Boolean @default(false)
-
-  // Relations
-  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([chatId, userId])
-  @@map("chat_members")
-}
-
-// Enhanced Message model with Telegram features
+// Message model for chat conversations
 model Message {
   id            String        @id @default(cuid())
   content       String?
-  type          MessageType   @default(TEXT)
-  status        MessageStatus @default(SENDING)
+  type          String        @default("text") // "text", "image", etc. - simple string
   chatId        String
-  senderId      String
-  replyToId     String?       // For threaded messages
-  forwardedFromId String?     // Original sender for forwarded messages
+  senderId      String        // User ID (AI responses use companion's creator for tracking)
+  replyToId     String?       // For threaded conversations
   isEdited      Boolean       @default(false)
   isDeleted     Boolean       @default(false)
-  isPinned      Boolean       @default(false)
-  scheduledAt   DateTime?     // For scheduled messages
-  expiresAt     DateTime?     // For disappearing messages
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?     // When message was deleted
 
-  // Relations
-  chat              Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  sender            User              @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  replyTo           Message?          @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies           Message[]         @relation("MessageReplies")
-  forwardedFrom     User?             @relation("MessageForwarder", fields: [forwardedFromId], references: [id])
-  attachments       MessageAttachment[]
-  reactions         MessageReaction[]
-  readReceipts      ReadReceipt[]
-  edits            MessageEdit[]
+  // Core chat relations
+  chat         Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender       User              @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?          @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      Message[]         @relation("MessageReplies")
+  attachments  MessageAttachment[]
+  edits        MessageEdit[]
+  
+  // Social system relations
+  socialReactions    SocialMessageReaction[]
 
   @@map("messages")
 }
 
-// File attachments for messages
+// Image attachments for messages
 model MessageAttachment {
   id        String   @id @default(cuid())
   messageId String
-  fileName  String
-  fileUrl   String
-  fileType  String   // MIME type
-  fileSize  Int      // Size in bytes
-  width     Int?     // For images/videos
-  height    Int?     // For images/videos
-  duration  Int?     // For audio/video
-  thumbnail String?  // Thumbnail URL for media
+  imageUrl  String   // Direct image URL
+  width     Int?     // Image width (optional)
+  height    Int?     // Image height (optional)
+  altText   String?  // Alt text for accessibility
   createdAt DateTime @default(now())
 
   // Relations
@@ -197,44 +161,12 @@ model MessageAttachment {
   @@map("message_attachments")
 }
 
-// Message reactions (like/dislike, emojis)
-model MessageReaction {
-  id        String   @id @default(cuid())
-  messageId String
-  userId    String
-  emoji     String   // Emoji or reaction type
-  createdAt DateTime @default(now())
-
-  // Relations
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([messageId, userId, emoji])
-  @@map("message_reactions")
-}
-
-// Read receipts for message delivery status
-model ReadReceipt {
-  id        String   @id @default(cuid())
-  messageId String
-  userId    String
-  readAt    DateTime @default(now())
-
-  // Relations
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([messageId, userId])
-  @@map("read_receipts")
-}
-
 // Message edit history
 model MessageEdit {
   id          String   @id @default(cuid())
   messageId   String
   userId      String
-  oldContent  String
-  newContent  String
+  beforeEdit  String   // What the content was before this edit
   editedAt    DateTime @default(now())
 
   // Relations
@@ -242,4 +174,146 @@ model MessageEdit {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("message_edits")
+}
+
+// Chat checkpoint model - save conversation state at a point in time
+model ChatCheckpoint {
+  id          String   @id @default(cuid())
+  title       String   // User's custom name for this checkpoint
+  description String?  // Optional description
+  chatId      String   // Reference to original chat
+  creatorId   String   // Who created this checkpoint
+  isPublic    Boolean  @default(false) // Can others see this checkpoint
+  usageCount  Int      @default(0) // How many times used
+  tags        String[] // For search
+  createdAt   DateTime @default(now()) // When checkpoint was created = conversation state
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  chat        Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  creator     User     @relation("CheckpointCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("chat_checkpoints")
+}
+
+// =============================================================================
+// SOCIAL SYSTEM - Content Discovery & User Interactions  
+// =============================================================================
+
+enum SocialMessageReactionType {
+  EMOJI
+  BOOKMARK
+  LIKE
+  // Future: STICKER, DISLIKE, etc.
+}
+
+enum SocialCompanionReactionType {
+  BOOKMARK
+  LIKE
+  DISLIKE
+  BLOCK
+}
+
+enum SocialUserReactionType {
+  LIKE
+  FOLLOW
+  BLOCK
+}
+
+// User reactions to messages (emojis, bookmarks, etc.)
+model SocialMessageReaction {
+  id        String             @id @default(cuid())
+  messageId String
+  userId    String
+  type      SocialMessageReactionType
+  emoji     String?            // Unicode emoji (e.g., "😀", "❤️") - null for bookmarks
+  createdAt DateTime           @default(now())
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes for better query performance
+  @@unique([messageId, userId, type, emoji])
+  @@index([userId, type])  // Fast bookmarks query
+  @@index([messageId, type]) // Fast message reactions query
+  @@map("social_message_reactions")
+}
+
+// User reactions to companions (bookmarks, likes, dislikes)
+model SocialCompanionReaction {
+  id          String               @id @default(cuid())
+  companionId String
+  userId      String
+  type        SocialCompanionReactionType
+  createdAt   DateTime             @default(now())
+
+  // Relations
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes for better query performance
+  @@unique([companionId, userId, type]) // One reaction type per user per companion
+  @@index([userId, type])  // Fast user bookmarks/likes query
+  @@index([companionId, type]) // Fast companion popularity query
+  @@map("social_companion_reactions")
+}
+
+// User reactions to other users (likes, subscribes, follows, blocks)
+model SocialUserReaction {
+  id         String          @id @default(cuid())
+  fromUserId String          // User performing the action
+  toUserId   String          // User receiving the action
+  type       SocialUserReactionType
+  createdAt  DateTime        @default(now())
+
+  // Relations
+  fromUser User @relation("SocialUserReactionsGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("SocialUserReactionsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  // Indexes for better query performance
+  @@unique([fromUserId, toUserId, type]) // One reaction type per user pair
+  @@index([fromUserId, type])  // Fast user's subscriptions/follows query
+  @@index([toUserId, type])    // Fast user's followers/subscribers query
+  @@map("social_user_reactions")
+}
+
+// =============================================================================
+// OPERATIONS SYSTEM - Moderation & Platform Management
+// =============================================================================
+
+enum OpsReportReason {
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  SPAM
+  HATE_SPEECH
+  VIOLENCE
+  SEXUAL_CONTENT
+  COPYRIGHT
+  IMPERSONATION
+  OTHER
+}
+
+// Report model for abuse/policy violations
+model OpsReport {
+  id          String      @id @default(cuid())
+  reporterId  String      // User who submitted the report
+  targetType  String      // "companion", "user", "message", "chat_checkpoint"
+  targetId    String      // ID of the reported item
+  reason      OpsReportReason
+  description String?     // Additional details from reporter
+  status      String      @default("pending") // "pending", "under_review", "resolved", "dismissed"
+  moderatorNotes String?  // Internal notes for moderation team
+  resolvedAt  DateTime?   // When report was resolved
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  // Indexes for moderation dashboard
+  @@index([status, createdAt]) // Fast pending reports query
+  @@index([targetType, targetId]) // Fast reports for specific item
+  @@index([reporterId]) // Track user's reporting history
+  @@map("ops_reports")
 }

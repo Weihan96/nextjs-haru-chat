@@ -158,28 +158,29 @@ const ChatList = ({ chats, className }: ChatListProps) => {
           />
         )}
       </div>
-      
-      <ScrollArea className="flex-1 overscroll-contain">
-        <div ref={targetRef} className="divide-y divide-border">
-          {filteredChats.length > 0 ? (
-            filteredChats.map((chat) => (
-              <div key={chat.id} className="relative">
-                <ChatItem 
-                  chat={chat}
-                  isSelected={selectedChats.includes(chat.id)}
-                  isActive={chatId === chat.id}
-                  isManageMode={isManageMode}
-                  onSelectChat={handleSelectChat}
-                />
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          <div ref={targetRef} className="divide-y divide-border">
+            {filteredChats.length > 0 ? (
+              filteredChats.map((chat) => (
+                <div key={chat.id} className="relative">
+                  <ChatItem 
+                    chat={chat}
+                    isSelected={selectedChats.includes(chat.id)}
+                    isActive={chatId === chat.id}
+                    isManageMode={isManageMode}
+                    onSelectChat={handleSelectChat}
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="p-6 text-center text-muted-foreground">
+                No chats found. Start a conversation with an AI companion.
               </div>
-            ))
-          ) : (
-            <div className="p-6 text-center text-muted-foreground">
-              No chats found. Start a conversation with an AI companion.
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
          
       <ChatDeleteDialog 
         isOpen={deleteDialogOpen}

@@ -1,11 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -14,52 +9,279 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// User model to integrate with Clerk
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                       String                    @id @default(cuid())
+  clerkId                  String                    @unique
+  email                    String                    @unique
+  username                 String?                   @unique
+  displayName              String?
+  bio                      String?
+  imageUrl                 String?
+  credits                  Int                       @default(0)
+  isOnline                 Boolean                   @default(false)
+  lastSeen                 DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  chatCheckpoints          ChatCheckpoint[]          @relation("CheckpointCreator")
+  chats                    Chat[]
+  createdCompanions        Companion[]               @relation("CompanionCreator")
+  editedMessages           MessageEdit[]
+  sentMessages             Message[]                 @relation("MessageSender")
+  submittedReports         OpsReport[]
+  socialCompanionReactions SocialCompanionReaction[]
+  socialMessageReactions   SocialMessageReaction[]
+  socialReactionsGiven     SocialUserReaction[]      @relation("SocialUserReactionsGiven")
+  socialReactionsReceived  SocialUserReaction[]      @relation("SocialUserReactionsReceived")
+  userPersonas             UserPersona[]
 
-  // Relations for chat functionality
-  chats     Chat[]
-  messages  Message[]
-
+  @@index([username, displayName], map: "user_search_idx")
   @@map("users")
 }
 
-// Chat model for managing conversations
-model Chat {
-  id        String   @id @default(cuid())
-  title     String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model UserPersona {
+  id          String   @id @default(cuid())
+  userId      String
+  roleName    String
+  description String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  chats       Chat[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages Message[]
+  @@map("user_personas")
+}
+
+model Tag {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  companions  CompanionTag[]
+
+  @@index([name], map: "tag_name_idx")
+  @@map("tags")
+}
+
+// Junction model for many-to-many relationship between Companion and Tag
+model CompanionTag {
+  id          String    @id @default(cuid())
+  companionId String
+  tagId       String
+  createdAt   DateTime  @default(now())
+  companion   Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([companionId, tagId])
+  @@index([companionId])
+  @@index([tagId])
+  @@map("companion_tags")
+}
+
+model Companion {
+  id               String                    @id @default(cuid())
+  name             String
+  description      String?
+  imageUrl         String?
+  imageSet         String[]
+  systemPrompt     String
+  startMessage     String
+  generationConfig Json
+  isPublic         Boolean                   @default(false)
+  creatorId        String
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  chats            Chat[]
+  creator          User                      @relation("CompanionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  socialReactions  SocialCompanionReaction[]
+  tags             CompanionTag[]
+
+  @@index([name], map: "companion_name_idx")
+  @@index([isPublic, createdAt], map: "companion_discovery_idx")
+  @@map("companions")
+}
+
+model Chat {
+  id            String           @id @default(cuid())
+  title         String?
+  userId        String
+  companionId   String
+  userPersonaId String?
+  isDeleted     Boolean          @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  checkpoints   ChatCheckpoint[]
+  companion     Companion        @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userPersona   UserPersona?     @relation(fields: [userPersonaId], references: [id])
+  messages      Message[]
 
   @@map("chats")
 }
 
-// Message model for storing chat messages
 model Message {
-  id        String   @id @default(cuid())
-  content   String
-  role      String   // 'user' or 'assistant'
-  chatId    String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String                  @id @default(cuid())
+  content         String?
+  type            String                  @default("text")
+  chatId          String
+  senderId        String
+  replyToId       String?
+  isEdited        Boolean                 @default(false)
+  isDeleted       Boolean                 @default(false)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  deletedAt       DateTime?
+  attachments     MessageAttachment[]
+  edits           MessageEdit[]
+  chat            Chat                    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  replyTo         Message?                @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies         Message[]               @relation("MessageReplies")
+  sender          User                    @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  socialReactions SocialMessageReaction[]
 
-  // Relations
-  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@index([chatId, isDeleted, createdAt], map: "message_chat_search_idx")
+  @@index([senderId, isDeleted, createdAt], map: "message_user_history_idx")
   @@map("messages")
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  imageUrl  String
+  width     Int?
+  height    Int?
+  altText   String?
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
+}
+
+model MessageEdit {
+  id         String   @id @default(cuid())
+  messageId  String
+  userId     String
+  beforeEdit String
+  editedAt   DateTime @default(now())
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("message_edits")
+}
+
+model ChatCheckpoint {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  chatId      String
+  creatorId   String
+  isPublic    Boolean  @default(false)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  chat        Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  creator     User     @relation("CheckpointCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([title], map: "checkpoint_title_idx")
+  @@index([isPublic, createdAt], map: "checkpoint_discovery_idx")
+  @@map("chat_checkpoints")
+}
+
+model SocialMessageReaction {
+  id        String                    @id @default(cuid())
+  messageId String
+  userId    String
+  type      SocialMessageReactionType
+  emoji     String?
+  createdAt DateTime                  @default(now())
+  message   Message                   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, type, emoji])
+  @@index([userId, type])
+  @@index([messageId, type])
+  @@map("social_message_reactions")
+}
+
+model SocialCompanionReaction {
+  id          String                      @id @default(cuid())
+  companionId String
+  userId      String
+  type        SocialCompanionReactionType
+  createdAt   DateTime                    @default(now())
+  companion   Companion                   @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companionId, userId, type])
+  @@index([userId, type])
+  @@index([companionId, type])
+  @@map("social_companion_reactions")
+}
+
+model SocialUserReaction {
+  id         String                 @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  type       SocialUserReactionType
+  createdAt  DateTime               @default(now())
+  fromUser   User                   @relation("SocialUserReactionsGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User                   @relation("SocialUserReactionsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId, type])
+  @@index([fromUserId, type])
+  @@index([toUserId, type])
+  @@map("social_user_reactions")
+}
+
+model OpsReport {
+  id             String          @id @default(cuid())
+  reporterId     String
+  targetType     String
+  targetId       String
+  reason         OpsReportReason
+  description    String?
+  status         String          @default("pending")
+  moderatorNotes String?
+  resolvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  reporter       User            @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@index([reporterId])
+  @@map("ops_reports")
+}
+
+enum SocialMessageReactionType {
+  EMOJI
+  BOOKMARK
+  LIKE
+}
+
+enum SocialCompanionReactionType {
+  BOOKMARK
+  LIKE
+  DISLIKE
+  BLOCK
+}
+
+enum SocialUserReactionType {
+  LIKE
+  FOLLOW
+  BLOCK
+}
+
+enum OpsReportReason {
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  SPAM
+  HATE_SPEECH
+  VIOLENCE
+  SEXUAL_CONTENT
+  COPYRIGHT
+  IMPERSONATION
+  OTHER
 }

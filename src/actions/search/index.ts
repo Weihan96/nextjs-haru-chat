@@ -15,6 +15,10 @@ export interface SearchResults {
       username: string | null;
       displayName: string | null;
     };
+    tags: Array<{
+      id: string;
+      name: string;
+    }>;
     _relevance?: number;
   }>;
   users: Array<{
@@ -62,6 +66,8 @@ interface CompanionSearchResult {
   isPublic: boolean;
   creatorUsername: string | null;
   creatorDisplayName: string | null;
+  tagNames: string | null; // Comma-separated tag names
+  tagIds: string | null;   // Comma-separated tag IDs
 }
 
 interface UserSearchResult {
@@ -145,7 +151,7 @@ export async function globalSearch(query: string): Promise<SearchResults> {
 }
 
 /**
- * Search AI companions with full-text search
+ * Search AI companions with full-text search including tags
  */
 export async function searchCompanions(query: string, currentUserId?: string) {
   const { userId } = await auth();
@@ -155,6 +161,7 @@ export async function searchCompanions(query: string, currentUserId?: string) {
 
   try {
     // Use PostgreSQL full-text search with to_tsvector and to_tsquery
+    // Include tags in the search by joining with CompanionTag and Tag tables
     const companions = await prisma.$queryRaw<CompanionSearchResult[]>`
       SELECT 
         c.id,
@@ -163,20 +170,33 @@ export async function searchCompanions(query: string, currentUserId?: string) {
         c."imageUrl",
         c."isPublic",
         u.username as "creatorUsername",
-        u."displayName" as "creatorDisplayName"
+        u."displayName" as "creatorDisplayName",
+        STRING_AGG(DISTINCT t.name, ',') as "tagNames",
+        STRING_AGG(DISTINCT t.id, ',') as "tagIds"
       FROM companions c
       JOIN users u ON c."creatorId" = u.id
+      LEFT JOIN companion_tags ct ON c.id = ct."companionId"
+      LEFT JOIN tags t ON ct."tagId" = t.id
       WHERE 
         (c."isPublic" = true OR c."creatorId" = ${searchUserId})
         AND (
-          to_tsvector('english', c.name || ' ' || COALESCE(c.description, '')) 
-          @@ plainto_tsquery('english', ${query})
+          c.id IN (
+            SELECT DISTINCT comp.id 
+            FROM companions comp
+            LEFT JOIN companion_tags ct2 ON comp.id = ct2."companionId"
+            LEFT JOIN tags t2 ON ct2."tagId" = t2.id
+            WHERE 
+              to_tsvector('english', comp.name || ' ' || COALESCE(comp.description, '') || ' ' || COALESCE(t2.name, '')) 
+              @@ plainto_tsquery('english', ${query})
+          )
         )
+      GROUP BY c.id, c.name, c.description, c."imageUrl", c."isPublic", c."createdAt", u.username, u."displayName"
       ORDER BY 
         ts_rank(
           to_tsvector('english', c.name || ' ' || COALESCE(c.description, '')), 
           plainto_tsquery('english', ${query})
-        ) DESC
+        ) DESC,
+        c."createdAt" DESC
       LIMIT 20
     `;
 
@@ -190,6 +210,12 @@ export async function searchCompanions(query: string, currentUserId?: string) {
         username: companion.creatorUsername,
         displayName: companion.creatorDisplayName,
       },
+      tags: companion.tagNames && companion.tagIds
+        ? companion.tagNames.split(',').map((name, index) => ({
+            id: companion.tagIds!.split(',')[index],
+            name: name.trim()
+          }))
+        : [],
     }));
   } catch (error) {
     console.error("Companion search error:", error);
@@ -395,6 +421,148 @@ export async function searchWithinChat(chatId: string, query: string) {
     }));
   } catch (error) {
     console.error("Chat search error:", error);
+    return [];
+  }
+}
+
+/**
+ * Search and filter companions by tag
+ */
+export async function searchCompanionsByTag(tagId: string, currentUserId?: string) {
+  const { userId } = await auth();
+  const searchUserId = currentUserId || userId;
+  
+  if (!searchUserId || !tagId.trim()) return [];
+
+  try {
+    const companions = await prisma.companion.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { isPublic: true },
+              { creatorId: searchUserId }
+            ]
+          },
+          {
+            tags: {
+              some: {
+                tagId: tagId
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        creator: {
+          select: {
+            username: true,
+            displayName: true
+          }
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 20
+    });
+
+    return companions.map(companion => ({
+      id: companion.id,
+      name: companion.name,
+      description: companion.description,
+      imageUrl: companion.imageUrl,
+      isPublic: companion.isPublic,
+      creator: {
+        username: companion.creator.username,
+        displayName: companion.creator.displayName
+      },
+      tags: companion.tags.map(ct => ({
+        id: ct.tag.id,
+        name: ct.tag.name
+      }))
+    }));
+  } catch (error) {
+    console.error("Companion search by tag error:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all available tags
+ */
+export async function getAllTags() {
+  try {
+    const tags = await prisma.tag.findMany({
+      include: {
+        _count: {
+          select: {
+            companions: true
+          }
+        }
+      },
+      orderBy: [
+        { name: 'asc' }
+      ]
+    });
+
+    return tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      description: tag.description,
+      companionCount: tag._count.companions
+    }));
+  } catch (error) {
+    console.error("Get tags error:", error);
+    return [];
+  }
+}
+
+/**
+ * Search tags by name
+ */
+export async function searchTags(query: string) {
+  if (!query.trim()) return [];
+
+  try {
+    const tags = await prisma.tag.findMany({
+      where: {
+        name: {
+          contains: query,
+          mode: 'insensitive'
+        }
+      },
+      include: {
+        _count: {
+          select: {
+            companions: true
+          }
+        }
+      },
+      orderBy: [
+        { name: 'asc' }
+      ],
+      take: 10
+    });
+
+    return tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      description: tag.description,
+      companionCount: tag._count.companions
+    }));
+  } catch (error) {
+    console.error("Search tags error:", error);
     return [];
   }
 } 

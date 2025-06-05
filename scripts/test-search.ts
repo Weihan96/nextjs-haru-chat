@@ -232,6 +232,94 @@ async function runSearchTests() {
     })
     console.log()
 
+    // Test 7: Tag-based Search
+    console.log('7️⃣  Testing Tag-based Search: "Romance"')
+    console.log('─'.repeat(40))
+    
+    const tagSearch = await prisma.$queryRaw`
+      SELECT 
+        c.id,
+        c.name,
+        c.description,
+        STRING_AGG(t.name, ', ') as tags
+      FROM companions c
+      JOIN companion_tags ct ON c.id = ct."companionId"
+      JOIN tags t ON ct."tagId" = t.id
+      WHERE 
+        c."isPublic" = true
+        AND t.name ILIKE '%romance%'
+      GROUP BY c.id, c.name, c.description
+      ORDER BY c."createdAt" DESC
+    ` as any[]
+    
+    console.log(`✅ Romance companions found: ${tagSearch.length}`)
+    tagSearch.forEach(result => {
+      console.log(`   - ${result.name}: Tags [${result.tags}]`)
+    })
+    console.log()
+
+    // Test 8: All Tags with Usage Count
+    console.log('8️⃣  Testing Tag Usage Statistics')
+    console.log('─'.repeat(40))
+    
+    const tagStats = await prisma.$queryRaw`
+      SELECT 
+        t.id,
+        t.name,
+        t.description,
+        COUNT(ct."companionId") as "companionCount"
+      FROM tags t
+      LEFT JOIN companion_tags ct ON t.id = ct."tagId"
+      GROUP BY t.id, t.name, t.description
+      ORDER BY "companionCount" DESC, t.name ASC
+    ` as any[]
+    
+    console.log(`✅ Tags with usage statistics: ${tagStats.length}`)
+    tagStats.forEach(result => {
+      console.log(`   - ${result.name}: ${result.companionCount} companion(s)`)
+      if (result.description) {
+        console.log(`     ${result.description}`)
+      }
+    })
+    console.log()
+
+    // Test 9: Search Companions with Tag Information
+    console.log('9️⃣  Testing Companion Search with Tags: "creative"')
+    console.log('─'.repeat(40))
+    
+    const companionWithTags = await prisma.$queryRaw`
+      SELECT 
+        c.id,
+        c.name,
+        c.description,
+        c."imageUrl",
+        u.username as "creatorUsername",
+        STRING_AGG(DISTINCT t.name, ', ') as tags
+      FROM companions c
+      JOIN users u ON c."creatorId" = u.id
+      LEFT JOIN companion_tags ct ON c.id = ct."companionId"
+      LEFT JOIN tags t ON ct."tagId" = t.id
+      WHERE 
+        c."isPublic" = true
+        AND (
+          to_tsvector('english', c.name || ' ' || COALESCE(c.description, '') || ' ' || COALESCE(t.name, '')) 
+          @@ plainto_tsquery('english', 'creative')
+        )
+      GROUP BY c.id, c.name, c.description, c."imageUrl", u.username
+      ORDER BY 
+        ts_rank(
+          to_tsvector('english', c.name || ' ' || COALESCE(c.description, '')), 
+          plainto_tsquery('english', 'creative')
+        ) DESC
+    ` as any[]
+    
+    console.log(`✅ Creative companions found: ${companionWithTags.length}`)
+    companionWithTags.forEach(result => {
+      console.log(`   - ${result.name} by @${result.creatorUsername}`)
+      console.log(`     Tags: ${result.tags || 'No tags'}`)
+    })
+    console.log()
+
     // Summary
     console.log('🎉 All search tests completed successfully!')
     console.log('\n📊 Search Performance Summary:')
@@ -242,6 +330,8 @@ async function runSearchTests() {
     console.log('✅ Advanced operators: AND (&), OR (|), NOT (!), Prefix (*)')
     console.log('✅ Privacy-aware filtering (public + user-owned content)')
     console.log('✅ Proper indexing for performance optimization')
+    console.log('✅ Tag-based filtering and search integration')
+    console.log('✅ Tag usage statistics and analytics')
 
   } catch (error) {
     console.error('❌ Search test failed:', error)

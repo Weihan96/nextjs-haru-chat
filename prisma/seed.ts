@@ -78,7 +78,9 @@ async function main() {
       await prisma.chatCheckpoint.deleteMany()
       await prisma.chat.deleteMany()
       await prisma.userPersona.deleteMany()
+      await prisma.companionTag.deleteMany()
       await prisma.companion.deleteMany()
+      await prisma.tag.deleteMany()
       await prisma.user.deleteMany()
       console.log('✅ Existing data cleared successfully')
     } catch (error) {
@@ -133,6 +135,62 @@ async function main() {
   
   const users = await createWithDelay(userCreators, 2, 200)
   console.log('✅ Created users')
+
+  // Create Tags first
+  console.log('🏷️  Creating tags...')
+  const tagCreators = [
+    () => prisma.tag.create({
+      data: {
+        name: 'Emotional Support',
+        description: 'AI companions that provide comfort and emotional guidance'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Romance',
+        description: 'Romantic and affectionate AI companions'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Education',
+        description: 'AI tutors and learning assistants'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Creative',
+        description: 'AI companions for brainstorming and creative projects'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Intellectual',
+        description: 'AI companions for deep discussions and analysis'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Mindfulness',
+        description: 'AI companions focused on meditation and spiritual growth'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Problem Solving',
+        description: 'AI companions that help tackle challenges and find solutions'
+      }
+    }),
+    () => prisma.tag.create({
+      data: {
+        name: 'Conversational',
+        description: 'AI companions great for casual and engaging conversations'
+      }
+    }),
+  ]
+
+  const tags = await createWithDelay(tagCreators, 3, 150)
+  console.log('✅ Created tags')
 
   // Create User Personas
   console.log('🎭 Creating user personas...')
@@ -288,6 +346,85 @@ async function main() {
   
   const companions = await createWithDelay(companionCreators, 2, 300)
   console.log('✅ Created AI companions')
+
+  // Create Companion-Tag relationships
+  console.log('🔗 Creating companion-tag relationships...')
+  const companionTagCreators = [
+    // Luna - Emotional Support + Conversational
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[0].id,
+        tagId: tags[0].id // Emotional Support
+      }
+    }),
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[0].id,
+        tagId: tags[7].id // Conversational
+      }
+    }),
+    // Zara - Creative + Intellectual + Problem Solving
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[1].id,
+        tagId: tags[3].id // Creative
+      }
+    }),
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[1].id,
+        tagId: tags[4].id // Intellectual
+      }
+    }),
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[1].id,
+        tagId: tags[6].id // Problem Solving
+      }
+    }),
+    // Kai - Romance + Conversational
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[2].id,
+        tagId: tags[1].id // Romance
+      }
+    }),
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[2].id,
+        tagId: tags[7].id // Conversational
+      }
+    }),
+    // Professor Arc - Education + Problem Solving
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[3].id,
+        tagId: tags[2].id // Education
+      }
+    }),
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[3].id,
+        tagId: tags[6].id // Problem Solving
+      }
+    }),
+    // Sage - Mindfulness + Emotional Support
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[4].id,
+        tagId: tags[5].id // Mindfulness
+      }
+    }),
+    () => prisma.companionTag.create({
+      data: {
+        companionId: companions[4].id,
+        tagId: tags[0].id // Emotional Support
+      }
+    }),
+  ]
+
+  const companionTags = await createWithDelay(companionTagCreators, 4, 100)
+  console.log('✅ Created companion-tag relationships')
 
   // Create Chats
   console.log('💬 Creating chats...')
@@ -542,7 +679,9 @@ async function main() {
   console.log('\n📊 Final Summary:')
   console.log(`   👥 Users: ${users.length}`)
   console.log(`   🎭 User Personas: ${personas.length}`)
+  console.log(`   🏷️  Tags: ${tags.length}`)
   console.log(`   🤖 AI Companions: ${companions.length}`)
+  console.log(`   🔗 Companion-Tag Relations: ${companionTags.length}`)
   console.log(`   💬 Chats: ${chats.length}`)
   console.log(`   📝 Messages: ${messages.length}`)
   console.log(`   🔖 Checkpoints: ${checkpoints.length}`)
@@ -550,6 +689,7 @@ async function main() {
   console.log(`   🚨 Reports: 1 test report`)
   console.log('\n🔍 Ready to test search functionality!')
   console.log('   Try searching for: "neural network", "romance", "virtual reality", "AI", "creative writing"')
+  console.log('   Tag-based filtering: "Emotional Support", "Romance", "Education", "Creative"')
 }
 
 main()

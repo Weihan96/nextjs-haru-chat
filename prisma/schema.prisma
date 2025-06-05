@@ -52,6 +52,33 @@ model UserPersona {
   @@map("user_personas")
 }
 
+model Tag {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  companions  CompanionTag[]
+
+  @@index([name], map: "tag_name_idx")
+  @@map("tags")
+}
+
+// Junction model for many-to-many relationship between Companion and Tag
+model CompanionTag {
+  id          String    @id @default(cuid())
+  companionId String
+  tagId       String
+  createdAt   DateTime  @default(now())
+  companion   Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([companionId, tagId])
+  @@index([companionId])
+  @@index([tagId])
+  @@map("companion_tags")
+}
+
 model Companion {
   id               String                    @id @default(cuid())
   name             String
@@ -68,6 +95,7 @@ model Companion {
   chats            Chat[]
   creator          User                      @relation("CompanionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   socialReactions  SocialCompanionReaction[]
+  tags             CompanionTag[]
 
   @@index([name], map: "companion_name_idx")
   @@index([isPublic, createdAt], map: "companion_discovery_idx")

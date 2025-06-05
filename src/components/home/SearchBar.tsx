@@ -6,37 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, X, Clock, Flame, User, Bot, ArrowLeft } from 'lucide-react';
-
-// Mock search history - in a real app, this would be stored in localStorage or a database
-const MOCK_RECENT_SEARCHES = [
-  'anime characters',
-  'sci-fi companions',
-  'historical figures'
-];
-
-// Mock trending searches
-const MOCK_TRENDING_SEARCHES = [
-  'celebrity AI',
-  'fantasy characters',
-  'gaming companions',
-  'philosophical mentors'
-];
-
-// Mock suggested companions
-const MOCK_SUGGESTED_COMPANIONS = [
-  { id: '1', name: 'Alena Moniaga', type: 'Character' },
-  { id: '2', name: 'Tom Lancaster', type: 'Character' },
-  { id: '3', name: 'Miko', type: 'Character' },
-  { id: '4', name: 'Captain Nova', type: 'Character' }
-];
-
-// Mock suggested people
-const MOCK_SUGGESTED_PEOPLE = [
-  { id: '10', name: 'Alexander', type: 'Person' },
-  { id: '11', name: 'Olivia', type: 'Person' },
-  { id: '12', name: 'Marcus', type: 'Person' }
-];
+import { Search, X, Clock, Flame, User, Bot, ArrowLeft, Loader2 } from 'lucide-react';
+import { useDebouncedGlobalSearch, useRecentSearches } from '@/hooks/useSearch';
+import { MOCK_TRENDING_SEARCHES } from '@/data/search';
 
 interface SearchBarProps {
   initialValue?: string;
@@ -48,7 +20,15 @@ const SearchBar = ({ initialValue = '', showBackButton = false, onBackClick }: S
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(initialValue);
-  const [recentSearches, setRecentSearches] = useState(MOCK_RECENT_SEARCHES);
+  
+  // Use the recent searches hook
+  const { recentSearches, addRecentSearch, removeRecentSearch } = useRecentSearches();
+
+  // Use debounced search for suggestions
+  const { data: searchResults, isLoading } = useDebouncedGlobalSearch(
+    inputValue, 
+    300 // 300ms delay
+  );
 
   // Update input value when initialValue prop changes
   useEffect(() => {
@@ -58,19 +38,12 @@ const SearchBar = ({ initialValue = '', showBackButton = false, onBackClick }: S
   const handleSearch = (searchTerm: string) => {
     if (!searchTerm.trim()) return;
     
-    // Add to recent searches if not already there
-    if (!recentSearches.includes(searchTerm)) {
-      setRecentSearches(prev => [searchTerm, ...prev].slice(0, 5)); // Keep only the 5 most recent
-    }
+    // Add to recent searches
+    addRecentSearch(searchTerm);
     
     // Navigate to search page with query
     router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     setOpen(false);
-  };
-
-  const removeRecentSearch = (searchTerm: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRecentSearches(prev => prev.filter(term => term !== searchTerm));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -78,18 +51,6 @@ const SearchBar = ({ initialValue = '', showBackButton = false, onBackClick }: S
       handleSearch(inputValue);
     }
   };
-
-  // Filter suggestions based on input
-  const filterSuggestions = (items: Array<{id: string, name: string, type: string}>, input: string) => {
-    if (!input) return items;
-    return items.filter(item => 
-      item.name.toLowerCase().includes(input.toLowerCase()) ||
-      item.type.toLowerCase().includes(input.toLowerCase())
-    );
-  };
-
-  const filteredCompanions = filterSuggestions(MOCK_SUGGESTED_COMPANIONS, inputValue);
-  const filteredPeople = filterSuggestions(MOCK_SUGGESTED_PEOPLE, inputValue);
 
   return (
     <div className="sticky top-0 z-[50] bg-background px-4 py-3 border-b border-border">
@@ -126,37 +87,60 @@ const SearchBar = ({ initialValue = '', showBackButton = false, onBackClick }: S
           <PopoverContent className='p-0 w-[--radix-popover-trigger-width] z-[70]' align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
             <Command>
               <CommandList className='max-h-[calc(100vh-8rem)]'>
-                <CommandEmpty>No results found.</CommandEmpty>
+                <CommandEmpty>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Searching...</span>
+                    </div>
+                  ) : (
+                    "No results found."
+                  )}
+                </CommandEmpty>
                 
-                {inputValue ? (
+                {inputValue && searchResults ? (
                   <>
-                    {filteredCompanions.length > 0 && (
+                    {searchResults.companions.length > 0 && (
                       <CommandGroup heading="Characters">
-                        {filteredCompanions.map(companion => (
+                        {searchResults.companions.slice(0, 5).map(companion => (
                           <CommandItem
                             key={companion.id}
                             onSelect={() => handleSearch(companion.name)}
                             className="cursor-pointer"
                           >
                             <Bot className="mr-2 h-4 w-4" />
-                            <span>{companion.name}</span>
+                            <div className="flex flex-col">
+                              <span>{companion.name}</span>
+                              {companion.description && (
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {companion.description}
+                                </span>
+                              )}
+                            </div>
                           </CommandItem>
                         ))}
                       </CommandGroup>
                     )}
                     
-                    {filteredPeople.length > 0 && (
+                    {searchResults.users.length > 0 && (
                       <>
-                        {filteredCompanions.length > 0 && <CommandSeparator />}
+                        {searchResults.companions.length > 0 && <CommandSeparator />}
                         <CommandGroup heading="People">
-                          {filteredPeople.map(person => (
+                          {searchResults.users.slice(0, 3).map(user => (
                             <CommandItem
-                              key={person.id}
-                              onSelect={() => handleSearch(person.name)}
+                              key={user.id}
+                              onSelect={() => handleSearch(user.displayName || user.username || '')}
                               className="cursor-pointer"
                             >
                               <User className="mr-2 h-4 w-4" />
-                              <span>{person.name}</span>
+                              <div className="flex flex-col">
+                                <span>{user.displayName || user.username}</span>
+                                {user.bio && (
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {user.bio}
+                                  </span>
+                                )}
+                              </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -181,7 +165,10 @@ const SearchBar = ({ initialValue = '', showBackButton = false, onBackClick }: S
                               variant="ghost"
                               size="icon"
                               className="h-5 w-5"
-                              onClick={(e) => removeRecentSearch(term, e)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeRecentSearch(term);
+                              }}
                             >
                               <X className="h-3 w-3" />
                             </Button>

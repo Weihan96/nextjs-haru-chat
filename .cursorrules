@@ -1,0 +1,107 @@
+Always use bun as the package manager instead of npm or yarn.
+
+When suggesting package installations, always use `bun add` instead of `npm install` or `yarn add`.
+When suggesting running scripts, always use `bun run` instead of `npm run` or `yarn run`.
+When suggesting dev commands, use `bun dev` instead of `npm run dev` or `yarn dev`.
+
+Examples:
+- Use `bun add package-name` instead of `npm install package-name`
+- Use `bun add -D package-name` instead of `npm install -D package-name`
+- Use `bun run build` instead of `npm run build`
+- Use `bun dev` instead of `npm run dev` 
+
+## Git Commit Message Conventions
+
+### Commit Message Format
+Follow conventional commit format: `type: brief description`
+
+### Commit Types
+- `feat`: New feature or functionality
+- `fix`: Bug fix
+- `refactor`: Code refactoring without functional changes
+- `style`: Formatting, missing semicolons, etc (no code change)
+- `docs`: Documentation changes
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks, dependencies, build config
+- `perf`: Performance improvements
+- `ci`: CI/CD pipeline changes
+
+### Commit Message Guidelines
+- Use imperative mood: "add feature" not "added feature"
+- Keep title under 50 characters
+- Capitalize first letter of description
+- No period at the end of title
+- Include bullet points for multiple changes
+- Add "Breaking Changes:" section if applicable
+- Be concise but descriptive
+
+### Example Commit Messages
+```bash
+feat: integrate React Query with SSR for Home page data fetching
+
+fix: resolve toast notifications not staying open on errors
+
+refactor: extract common layout wrapper to reduce code duplication
+
+chore: update dependencies and add React Query DevTools
+
+docs: add React Query integration guide to README
+```
+
+## React Query Integration Best Practices
+
+### Data Fetching Architecture
+- Follow TanStack Query Advanced SSR guide for server-side prefetching
+- Use HydrationBoundary for optimal performance with prefetched data
+- Server actions should throw errors instead of swallowing them
+- Pass detailed error info to frontend for debugging in production
+
+### Error Handling Strategy
+- Show skeleton UI for both `(isLoading || error)` states
+- Use toast notifications for error feedback (non-intrusive)
+- Log detailed errors to frontend console with `console.error('🔴 ...')`
+- Avoid dedicated error screens - keep UI stable
+- Error toasts should always stay open with `duration: Infinity`
+
+### Type Safety & Organization
+- Use Prisma-generated types with `Prisma.CompanionGetPayload<>` 
+- Place types in existing `src/types/` directory structure
+- Server action files with `'use server'` can only export async functions
+- Separate types/constants into different files
+
+### Code Quality Guidelines
+- Don't modify component styling unless explicitly requested
+- Follow existing project folder structure and conventions
+- Use existing UI components (shadcn/ui) for consistency
+- Avoid over-engineering - prefer simple direct implementations
+
+### Server Actions Structure
+```typescript
+// ✅ Proper error handling in server actions
+catch (error) {
+  throw new Error(JSON.stringify({
+    message: 'User-friendly message',
+    debug: {
+      originalError: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    }
+  }))
+}
+```
+
+### Client-Side Error Handling
+```typescript
+// ✅ Frontend error logging and toast
+try {
+  const errorData = JSON.parse(error.message)
+  console.error('🔴 Feature error:', errorData.debug)
+  toast.error('User-friendly message', {
+    description: 'Detailed error description',
+    duration: Infinity, // Keep error toast open until user dismisses
+    action: { label: 'Retry', onClick: () => refetch() }
+  })
+} catch {
+  // Fallback for non-JSON errors
+}
+``` 

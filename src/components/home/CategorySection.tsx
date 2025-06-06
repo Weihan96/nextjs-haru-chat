@@ -1,16 +1,15 @@
 "use client"
 
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import CompanionCard from './CompanionCard';
 import { ChevronRight } from 'lucide-react';
 import Link from "next/link";
-import { Companion } from '@/data/companions';
+import { CompanionWithTags } from '@/types/companions';
 
 interface CategorySectionProps {
   title: string;
-  companions: Companion[];
+  companions: CompanionWithTags[];
   viewAllUrl: string;
 }
 
@@ -37,11 +36,11 @@ const CategorySection = ({
             key={companion.id}
             id={companion.id}
             name={companion.name}
-            avatar={companion.avatar}
-            description={companion.description}
-            tags={companion.tags}
-            likes={companion.likes}
-            messages={companion.messages}
+            avatar={companion.imageUrl || '/default-avatar.png'}
+            description={companion.description || 'No description available'}
+            tags={companion.tags.map(t => t.tag.name)}
+            likes={companion._count.socialReactions}
+            messages={companion._count.chats}
           />
         ))}
       </div>

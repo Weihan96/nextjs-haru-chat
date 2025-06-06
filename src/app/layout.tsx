@@ -12,6 +12,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { AppSidebar, MobileNavbar } from "@/components/layout/app-sidebar"
+import { QueryProvider } from "@/providers/query-provider";
 
 import { Metadata } from "next";
 
@@ -48,25 +49,27 @@ export default async function RootLayout({
           suppressHydrationWarning
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <TooltipProvider>
-            <SidebarProvider defaultOpen={defaultOpen}>
-              <AppSidebar />
+          <QueryProvider>
+            <TooltipProvider>
+              <SidebarProvider defaultOpen={defaultOpen}>
+                <AppSidebar />
 
-              {/* Main content with inset */}
-              <SidebarInset>
-                {/* Main content */}
-                <div className="flex flex-col h-screen">
-                  <div className="flex-1 overflow-hidden">
-                    {children}
+                {/* Main content with inset */}
+                <SidebarInset>
+                  {/* Main content */}
+                  <div className="flex flex-col h-screen">
+                    <div className="flex-1 overflow-hidden">
+                      {children}
+                    </div>
+                  
+                    {/* Mobile bottom navigation */}
+                    <MobileNavbar />
                   </div>
-                
-                  {/* Mobile bottom navigation */}
-                  <MobileNavbar />
-                </div>
-              </SidebarInset>
-            </SidebarProvider>
-            <Toaster />
-          </TooltipProvider>
+                </SidebarInset>
+              </SidebarProvider>
+              <Toaster />
+            </TooltipProvider>
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>

@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { useUser, SignOutButton } from '@clerk/nextjs'
+import { useUsage } from '@/hooks/use-profile'
 
 import {
   Avatar,
@@ -35,13 +36,7 @@ import {
 export function NavUser() {
   const { isMobile } = useSidebar()
   const { user } = useUser()
-
-  // Sample usage data for the progress bar
-  const usageData = {
-    used: 65,
-    total: 100,
-    label: '65/100 chats'
-  };
+  const { data: usage } = useUsage()
 
   if (!user) {
     return null
@@ -89,16 +84,20 @@ export function NavUser() {
                   <span className="truncate text-xs">{userEmail}</span>
                 </div>
               </div>
-              {/* Remaining Chats Progress Bar */}
-              <div className="m-2 px-4 py-3 border border-gray-200 bg-gray-50 rounded-lg">
-                <div className="space-y-2">
-                  <Progress value={usageData.used} className="h-1.5 bg-gray-100" />
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-600">Remaining Chats</span>
-                    <span className="font-medium text-gray-600">{usageData.label}</span>
+              {/* Usage Progress Bar - Only show if we have usage data */}
+              {usage && (
+                <div className="m-2 px-4 py-3 border border-gray-200 bg-gray-50 rounded-lg">
+                  <div className="space-y-2">
+                    <Progress value={usage.usagePercentage} className="h-1.5 bg-gray-100" />
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Daily Chats</span>
+                      <span className="font-medium text-gray-600">
+                        {usage.remainingChats} remaining
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

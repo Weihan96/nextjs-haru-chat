@@ -50,6 +50,15 @@ docs: add React Query integration guide to README
 
 ## React Query Integration Best Practices
 
+### Naming Conventions
+- Avoid variable names, types, or query keys that start with "use" as they can be confused with React hooks
+- Use concise, clear names without redundant prefixes
+- Examples:
+  - ✅ `ProfileData` instead of `UserProfileData`
+  - ✅ `getProfile()` instead of `getUserProfile()`
+  - ✅ `['profile', 'data']` instead of `['user-profile', 'profile']`
+  - ❌ Avoid `user-profile` in query keys (looks like a hook name)
+
 ### Data Fetching Architecture
 - Follow TanStack Query Advanced SSR guide for server-side prefetching
 - Use HydrationBoundary for optimal performance with prefetched data
@@ -62,6 +71,48 @@ docs: add React Query integration guide to README
 - Log detailed errors to frontend console with `console.error('🔴 ...')`
 - Avoid dedicated error screens - keep UI stable
 - Error toasts should always stay open with `duration: Infinity`
+
+### React Query Error Handling
+- **Mutations**: Use `onError` callback for automatic error handling
+- **Queries**: Manually handle errors with `useEffect` and toast notifications
+- **DRY principle**: Parse error once, call toast once - avoid duplication in try/catch blocks
+- Always provide user feedback for failed operations
+
+### Error Handling Pattern (DRY)
+```typescript
+// ✅ DRY Error Handling Pattern
+const handleError = (error: Error, operation: string) => {
+  let errorMessage = 'An unexpected error occurred'
+  let debugInfo = error.message
+
+  try {
+    const errorData = JSON.parse(error.message)
+    errorMessage = errorData.message || errorMessage
+    debugInfo = errorData.debug
+  } catch {
+    // Use default message for non-JSON errors
+  }
+
+  console.error(`🔴 ${operation} error:`, debugInfo)
+  toast.error(`Failed to ${operation}`, {
+    description: errorMessage,
+    duration: Infinity,
+    action: { label: 'Retry', onClick: () => retryAction() }
+  })
+}
+
+// Usage in mutations (automatic)
+const mutation = useMutation({
+  mutationFn: updateData,
+  onError: (error) => handleError(error, 'update data')
+})
+
+// Usage in queries (manual with useEffect)
+const { error } = useQuery({ ... })
+useEffect(() => {
+  if (error) handleError(error, 'load data')
+}, [error])
+```
 
 ### Type Safety & Organization
 - Use Prisma-generated types with `Prisma.CompanionGetPayload<>` 
@@ -90,18 +141,143 @@ catch (error) {
 }
 ```
 
-### Client-Side Error Handling
+### React Query Key Conventions
+- Always use simple string arrays for query keys: `['profile', 'usage']`
+- Avoid complex query key factory functions - they add unnecessary complexity
+- Use hierarchical structure: `['resource', 'type']` or `['resource', 'type', 'id']`
+- Keep keys consistent between server-side prefetching and client-side hooks
+- Server components should use the same string arrays as client hooks
+
+### Query Key Examples
 ```typescript
-// ✅ Frontend error logging and toast
-try {
-  const errorData = JSON.parse(error.message)
-  console.error('🔴 Feature error:', errorData.debug)
-  toast.error('User-friendly message', {
-    description: 'Detailed error description',
-    duration: Infinity, // Keep error toast open until user dismisses
-    action: { label: 'Retry', onClick: () => refetch() }
+// ✅ Simple and consistent
+queryKey: ['profile', 'data']
+queryKey: ['profile', 'usage'] 
+queryKey: ['companions', 'list']
+queryKey: ['companions', 'detail', companionId]
+
+// ❌ Avoid complex factories
+const queryKeys = {
+  profile: {
+    data: () => ['profile', 'data'],
+    usage: () => ['profile', 'usage']
+  }
+}
+``` 
+
+## Forms Best Practices
+
+### Form Architecture
+- Use React Hook Form + Zod + shadcn/ui Form components pattern
+- Create Zod schemas in `src/lib/schemas/` directory
+- Implement both client-side and server-side validation using the same schema
+- Use React Query for form submission when API integration is needed
+
+### Form Schema Structure
+```typescript
+// src/lib/schemas/example.ts
+import * as z from "zod"
+
+export const exampleFormSchema = z.object({
+  field: z
+    .string()
+    .min(2, "Field must be at least 2 characters")
+    .max(30, "Field must not exceed 30 characters")
+    .optional()
+    .or(z.literal(""))
+})
+
+export type ExampleFormData = z.infer<typeof exampleFormSchema>
+```
+
+### Form Component Pattern
+```typescript
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { exampleFormSchema, type ExampleFormData } from '@/lib/schemas/example'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+
+const ExampleForm = () => {
+  const form = useForm<ExampleFormData>({
+    resolver: zodResolver(exampleFormSchema),
+    defaultValues: { field: '' }
   })
-} catch {
-  // Fallback for non-JSON errors
+
+  const onSubmit = async (data: ExampleFormData) => {
+    // Handle form submission
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FormField
+          control={form.control}
+          name="field"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Field Label</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter value" {...field} value={field.value || ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={form.formState.isPending}>
+          Submit
+        </Button>
+      </form>
+    </Form>
+  )
+}
+```
+
+### Server Action Validation
+```typescript
+// src/lib/actions/example.ts
+import { exampleFormSchema } from '@/lib/schemas/example'
+
+export async function updateExample(data: ExampleFormData) {
+  // Validate input data with Zod schema
+  const validationResult = exampleFormSchema.safeParse(data)
+  
+  if (!validationResult.success) {
+    throw new Error(JSON.stringify({
+      message: 'Invalid input data',
+      debug: {
+        validationErrors: validationResult.error.flatten().fieldErrors,
+        providedData: data,
+        timestamp: new Date().toISOString()
+      }
+    }))
+  }
+
+  const validatedData = validationResult.data
+  // Process validated data...
+}
+```
+
+### Form Guidelines
+- Always use the same Zod schema for both client and server validation
+- Handle empty strings appropriately (convert to null for database storage)
+- Use `form.formState.isDirty` for enabling/disabling save buttons
+- Implement proper loading states with `isPending` from mutations
+- Use `form.reset()` to reset form state after successful submissions
+- Include proper error handling with structured error messages
+- Use `Textarea` for multi-line text inputs instead of `Input`
+- Add appropriate `placeholder` text for better UX
+
+### Server Actions Structure
+```typescript
+// ✅ Proper error handling in server actions
+catch (error) {
+  throw new Error(JSON.stringify({
+    message: 'User-friendly message',
+    debug: {
+      originalError: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    }
+  }))
 }
 ``` 

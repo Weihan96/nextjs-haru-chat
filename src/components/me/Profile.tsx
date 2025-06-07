@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,43 +10,203 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Loader2, User, AlertTriangle } from 'lucide-react';
 import { toast } from "sonner";
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import Image from "next/image";
+import { useUser } from '@clerk/nextjs';
+import { useProfile, useUsage, useUpdateProfile } from '@/hooks/use-profile';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { profileFormSchema, type ProfileFormData } from '@/lib/schemas/profile';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
 const Profile = () => {
-  // Sample usage data for the progress bar
-  const usageData = {
-    used: 65,
-    total: 100,
-    label: '65/100 chats'
+  const { user: clerkUser } = useUser();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+  const { data: usage, isLoading: usageLoading } = useUsage();
+  const updateProfileMutation = useUpdateProfile();
+
+  // React Hook Form setup
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      username: '',
+      displayName: '',
+      bio: ''
+    }
+  });
+
+  // Update form values when profile loads
+  React.useEffect(() => {
+    if (profile) {
+      form.reset({
+        username: profile.username || '',
+        displayName: profile.displayName || '',
+        bio: profile.bio || ''
+      });
+    }
+  }, [profile, form]);
+
+  // Show toast for profile loading errors
+  React.useEffect(() => {
+    if (profileError) {
+      // Parse error message or use fallback
+      let errorMessage = 'Please try refreshing the page'
+      let debugInfo = profileError.message
+
+      try {
+        const errorData = JSON.parse(profileError.message)
+        errorMessage = errorData.message || errorMessage
+        debugInfo = errorData.debug
+      } catch {
+        // Use default message for non-JSON errors
+      }
+
+      console.error('🔴 Profile loading error:', debugInfo)
+      toast.error('Failed to load profile', {
+        description: errorMessage,
+        duration: Infinity,
+        action: {
+          label: 'Retry',
+          onClick: () => window.location.reload()
+        }
+      })
+    }
+  }, [profileError]);
+
+  const onSubmit = async (data: ProfileFormData) => {
+    if (!profile) return;
+
+    // Only update fields that have changed
+    const changes: Partial<ProfileFormData> = {};
+    if (data.username !== profile.username) changes.username = data.username;
+    if (data.displayName !== profile.displayName) changes.displayName = data.displayName;
+    if (data.bio !== profile.bio) changes.bio = data.bio;
+
+    if (Object.keys(changes).length === 0) {
+      toast.info('No changes to save');
+      return;
+    }
+
+    try {
+      await updateProfileMutation.mutateAsync(changes);
+      form.reset(data); // Reset form dirty state
+    } catch (error) {
+      // Error handling with toast is done in the useUpdateProfile hook
+      // but we can add additional handling here if needed
+      console.error('Form submission error:', error)
+    }
   };
-  
-  const handleSave = () => {
-    toast('Profile updated', {
-      description: 'Your changes have been saved successfully.',
-    });
+
+  const handleCancel = () => {
+    if (profile) {
+      form.reset({
+        username: profile.username || '',
+        displayName: profile.displayName || '',
+        bio: profile.bio || ''
+      });
+    }
   };
-  
+
   const handleUpgrade = () => {
-    toast('Subscription upgraded', {
-      description: 'Thank you for upgrading to Premium!',
+    toast.info('Subscription feature coming soon!', {
+      description: 'We\'re working on implementing subscription plans.',
     });
   };
-  
+
+  // Loading skeleton
+  if (profileLoading) {
+    return (
+      <ScrollArea className="h-full">
+        <div className="h-full space-y-8">
+          <div className="py-3 px-4 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <div className="px-4 space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
+      </ScrollArea>
+    );
+  }
+
+  // Error state
+  if (profileError) {
+    return (
+      <ScrollArea className="h-full">
+        <div className="h-full flex items-center justify-center p-8">
+          <Alert className="max-w-md" variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load profile data. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </ScrollArea>
+    );
+  }
+
+  if (!profile) return null;
+
+  // Use Clerk user image as fallback
+  const displayImage = clerkUser?.imageUrl || profile.imageUrl || '/placeholder-avatar.png';
+  const displayName = profile.displayName || clerkUser?.fullName || 'User';
+  const email = profile.email || clerkUser?.primaryEmailAddress?.emailAddress || '';
+  const isFormDirty = form.formState.isDirty;
+
   return (
     <ScrollArea className="h-full">
       <div className="h-full space-y-8">
         <div className="py-3 px-4 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8">
           <Avatar className="h-24 w-24 border-4 border-primary">
-            <Image src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1" alt="User Avatar" className="object-cover" width={96} height={96}/>
+            <Image 
+              src={displayImage} 
+              alt={displayName} 
+              className="object-cover" 
+              width={96} 
+              height={96}
+            />
           </Avatar>
           
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Your Profile</h1>
+            <h1 className="text-2xl font-bold">{displayName}</h1>
             <p className="text-muted-foreground">Manage your account settings and subscription</p>
+            {profile.bio && (
+              <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
+            )}
+          </div>
+
+          {/* User Stats */}
+          <div className="flex gap-8 md:gap-12 px-8 md:px-12">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{profile.totalChats}</div>
+              <div className="text-sm text-muted-foreground">Chats</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{profile.totalMessages}</div>
+              <div className="text-sm text-muted-foreground">Messages</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{profile.companionsCreated}</div>
+              <div className="text-sm text-muted-foreground">Companions</div>
+            </div>
           </div>
         </div>
         
@@ -66,32 +226,105 @@ const Profile = () => {
                 <CardTitle>Personal Information</CardTitle>
                 <CardDescription>Update your personal details</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input id="username" defaultValue="aicompanion_lover" />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="displayName">Display Name</Label>
-                    <Input id="displayName" defaultValue="AI Enthusiast" />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="user@example.com" />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Input id="bio" defaultValue="Just someone who loves chatting with AI companions!" />
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline">Cancel</Button>
-                <Button onClick={handleSave}>Save Changes</Button>
-              </CardFooter>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter username"
+                                {...field}
+                                value={field.value || ''}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="displayName"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Display Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter display name"
+                                {...field}
+                                value={field.value || ''}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={email}
+                        disabled
+                        className="bg-muted"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Email is managed through your Clerk account
+                      </p>
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bio</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Tell us about yourself"
+                              className="resize-none"
+                              rows={3}
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      onClick={handleCancel}
+                      disabled={!isFormDirty || updateProfileMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={!isFormDirty || updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Form>
             </Card>
             
             <Card>
@@ -123,19 +356,25 @@ const Profile = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Current Plan</CardTitle>
-                <CardDescription>You are currently on the Free plan</CardDescription>
+                <CardDescription>
+                  You are currently on the {usage?.currentPlan === 'free' ? 'Free' : usage?.currentPlan === 'premium' ? 'Premium' : 'Pro'} plan
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Remaining Chats Progress Bar */}
-                <div className="mb-4 p-4 border border-gray-200 bg-gray-50 rounded-lg">
-                  <div className="space-y-2">
-                    <Progress value={usageData.used} className="h-1.5 bg-gray-100" />
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Remaining Chats</span>
-                      <span className="font-medium text-gray-600">{usageData.label}</span>
+                {/* Usage Progress Bar */}
+                {usage && !usageLoading && (
+                  <div className="mb-4 p-4 border border-gray-200 bg-gray-50 rounded-lg">
+                    <div className="space-y-2">
+                      <Progress value={usage.usagePercentage} className="h-1.5 bg-gray-100" />
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Daily Chat Usage</span>
+                        <span className="font-medium text-gray-600">
+                          {usage.remainingChats} chats remaining today
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card className="border-2 border-muted">
@@ -215,7 +454,7 @@ const Profile = () => {
                       </ul>
                     </CardContent>
                     <CardFooter>
-                      <Button variant="outline" className="w-full">Upgrade</Button>
+                      <Button className="w-full" variant="outline" onClick={handleUpgrade}>Coming Soon</Button>
                     </CardFooter>
                   </Card>
                 </div>
@@ -228,17 +467,9 @@ const Profile = () => {
                 <CardDescription>Manage your payment details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-md">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">•••• •••• •••• 4242</p>
-                      <p className="text-sm text-muted-foreground">Expires 12/25</p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">Edit</Button>
+                <div className="text-center py-6 text-muted-foreground">
+                  No payment method required for free plan.
                 </div>
-                <Button variant="outline">Add Payment Method</Button>
               </CardContent>
             </Card>
             
@@ -265,34 +496,29 @@ const Profile = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>New Messages</Label>
-                      <p className="text-sm text-muted-foreground">Receive notifications when your companions send you a message</p>
+                      <Label>Email Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Receive updates via email</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Marketing Emails</Label>
-                      <p className="text-sm text-muted-foreground">Receive emails about new features and promotions</p>
+                      <Label>Push Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Receive push notifications in browser</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Marketing Updates</Label>
+                      <p className="text-sm text-muted-foreground">Receive news and feature updates</p>
                     </div>
                     <Switch defaultChecked={false} />
                   </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>New Companions</Label>
-                      <p className="text-sm text-muted-foreground">Get notified when new AI companions are added</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button onClick={() => toast("Notification settings saved")}>
-                  Save Preferences
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
           

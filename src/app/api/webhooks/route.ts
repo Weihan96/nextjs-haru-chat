@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { Webhook } from 'svix'
-import { WebhookEvent } from '@clerk/nextjs/server'
+import { WebhookEvent, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
 
   // Get the body
   const payload = await req.text()
-  const body = JSON.parse(payload)
 
   // Get the Webhook Signing Secret
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET
@@ -72,6 +71,14 @@ export async function POST(req: NextRequest) {
       })
 
       console.log('✅ User created in database:', user.id)
+
+      // Store database user ID in Clerk's external_id field (recommended for foreign keys)
+      const client = await clerkClient()
+      await client.users.updateUser(id, {
+        externalId: user.id
+      })
+
+      console.log('✅ Database user ID stored in Clerk external_id:', user.id)
     }
 
     if (evt.type === 'user.updated') {
@@ -89,17 +96,26 @@ export async function POST(req: NextRequest) {
       })
 
       console.log('✅ User updated in database:', user.id)
+
+      // Ensure database user ID is in Clerk's external_id (in case it's missing)
+      const client = await clerkClient()
+      const clerkUser = await client.users.getUser(id)
+      
+      if (!clerkUser.externalId) {
+        await client.users.updateUser(id, {
+          externalId: user.id
+        })
+        console.log('✅ Database user ID added to Clerk external_id:', user.id)
+      }
     }
 
     if (evt.type === 'user.deleted') {
       const { id } = evt.data
+      
+      // TODO: Add a soft delete user by setting "deletedAt" timestamp
 
-      // Delete user from database
-      const user = await prisma.user.delete({
-        where: { clerkId: id || '' },
-      })
-
-      console.log('✅ User deleted from database:', user.id)
+      console.log('✅ User deleted from database:', id)
+      // Note: Clerk external_id is automatically cleaned up when user is deleted
     }
 
     return NextResponse.json({ message: 'Webhook received' })

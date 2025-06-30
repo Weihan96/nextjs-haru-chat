@@ -1,60 +1,13 @@
 "use client"
 
 import React from 'react';
-import Link from "next/link";
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import type { ChatListDatum } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import Image from "next/image";
 
-interface ChatListItemProps {
-  chat: ChatListDatum;
-  isSelected?: boolean;
-  isActive?: boolean;
-  isManageMode: boolean;
-  onSelectChat?: (chatId: string) => void;
-}
 
-const ChatListItem = ({ 
-  chat, 
-  isSelected = false, 
-  isActive = false,
-  isManageMode, 
-  onSelectChat 
-}: ChatListItemProps) => {
-  if (isManageMode) {
-    return (
-      <div 
-        className={cn(
-          "flex items-start gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors cursor-pointer",
-          isActive && "bg-secondary/50"
-        )}
-        onClick={() => onSelectChat && onSelectChat(chat.id)}
-      >
-        <Checkbox 
-          checked={isSelected}
-          className="my-auto"
-          onCheckedChange={() => onSelectChat && onSelectChat(chat.id)}
-        />
-        <ChatListItemContent chat={chat} />
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      href={`/chat/${chat.id}`}
-      className={cn(
-        "flex items-start gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors",
-        isActive && "bg-secondary/50"
-      )}
-    >
-      <ChatListItemContent chat={chat} />
-    </Link>
-  );
-};
 
 // Extracted the content to avoid duplication
 const ChatListItemContent = ({ chat }: { chat: ChatListDatum }) => {
@@ -94,4 +47,4 @@ const ChatListItemContent = ({ chat }: { chat: ChatListDatum }) => {
   );
 };
 
-export default ChatListItem;
+export default ChatListItemContent;

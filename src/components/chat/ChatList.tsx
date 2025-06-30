@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MoreVertical, Settings } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useParams } from "next/navigation";
-import { ChatPreview } from '@/types/chat';
+import { useUser } from '@clerk/nextjs';
+import { useComprehensiveChat } from '@/hooks/use-chat';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -15,42 +16,49 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from "sonner";
 import ChatSearch from './ChatSearch';
-import ChatItem from './ChatItem';
+import ChatListItem from './ChatListItem';
 import ChatManageMode from './ChatManageMode';
 import ChatDeleteDialog from './ChatDeleteDialog';
 import { useSyncWidth } from '@/hooks/use-sync-width';
 
 interface ChatListProps {
-  chats: ChatPreview[];
   className?: string;
 }
 
-const ChatList = ({ chats, className }: ChatListProps) => {
+const ChatList = ({className }: ChatListProps) => {
   const params = useParams();
   const chatId = params.chatId as string;
+  
+  // Handle authentication
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = user?.externalId || undefined;
+  
+  // Get chats from hook
+  const { chatListItems } = useComprehensiveChat({
+    enabled: isLoaded && isSignedIn && !!userId
+  });
+  
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredChats, setFilteredChats] = useState(chats);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isManageMode, setIsManageMode] = useState(false);
   const [selectedChats, setSelectedChats] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   
-  // Handle search functionality
-  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    
-    if (!query.trim()) {
-      setFilteredChats(chats);
-      return;
+  // Derive filtered chats from chatPreviews and searchQuery
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return chatListItems;
     }
     
-    const filtered = chats.filter(
-      chat => chat.name?.toLowerCase().includes(query.toLowerCase())
+    return chatListItems.filter(
+      chat => chat.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    
-    setFilteredChats(filtered);
-  }, [chats]);
+  }, [chatListItems, searchQuery]);
+  
+  // Handle search functionality
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
 
   const toggleManageMode = () => {
     if (isManageMode) {
@@ -101,15 +109,6 @@ const ChatList = ({ chats, className }: ChatListProps) => {
       toggleManageMode();
     }
   };
-  
-  // Update filtered chats when the chats prop or search query changes
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      handleSearch({ target: { value: searchQuery } } as React.ChangeEvent<HTMLInputElement>);
-    } else {
-      setFilteredChats(chats);
-    }
-  }, [chats, searchQuery, handleSearch]);
 
   // Update selectAll state when selectedChats changes
   useEffect(() => {
@@ -119,7 +118,7 @@ const ChatList = ({ chats, className }: ChatListProps) => {
       setSelectAll(false);
     }
   }, [selectedChats, filteredChats, selectAll]);
-  
+
   const {sourceRef, targetRef} = useSyncWidth<HTMLDivElement, HTMLDivElement>();
 
   return (
@@ -164,8 +163,8 @@ const ChatList = ({ chats, className }: ChatListProps) => {
             {filteredChats.length > 0 ? (
               filteredChats.map((chat) => (
                 <div key={chat.id} className="relative">
-                  <ChatItem 
-                    chat={chat}
+                  <ChatListItem
+                    chat={chat} 
                     isSelected={selectedChats.includes(chat.id)}
                     isActive={chatId === chat.id}
                     isManageMode={isManageMode}
@@ -181,8 +180,8 @@ const ChatList = ({ chats, className }: ChatListProps) => {
           </div>
         </ScrollArea>
       </div>
-         
-      <ChatDeleteDialog 
+
+      <ChatDeleteDialog
         isOpen={deleteDialogOpen}
         selectedCount={selectedChats.length}
         onOpenChange={setDeleteDialogOpen}
@@ -192,4 +191,4 @@ const ChatList = ({ chats, className }: ChatListProps) => {
   );
 };
 
-export default ChatList;
+export default ChatList; 

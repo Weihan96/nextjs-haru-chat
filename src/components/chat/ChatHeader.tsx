@@ -1,41 +1,49 @@
 "use client"
 
-
 import React from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useIsMobile } from '@/hooks/use-mobile';
 import Image from "next/image";
+import { useComprehensiveChat } from '@/hooks/use-chat';
+import { useUser } from '@clerk/nextjs';
 
 interface ChatHeaderProps {
-  companion?: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  className?: string;
   children?: React.ReactNode;
+  className?: string;
 }
 
 const ChatHeader = ({ 
-  companion,
+  children,
   className,
-  children
 }: ChatHeaderProps) => {
   const isMobile = useIsMobile();
-  const router = useRouter();
 
+  const params = useParams();
+  const router = useRouter();
+  const chatId = params.chatId as string;
+  
+  // Handle authentication
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = user?.externalId || undefined;
+  
+  // Get companion data from comprehensive hook
+  const { getCompanionData } = useComprehensiveChat({
+    enabled: isLoaded && isSignedIn && !!userId
+  });
+
+  const companion = getCompanionData(chatId);
+  
+  if(!companion || !chatId) {
+    return null;
+  }
   const handleBackToList = () => {
     router.push('/chat');
   };
 
-  // No chat selected
-  if (!companion) {
-    return null;
-  }
 
   return (
     <>

@@ -1,49 +1,59 @@
 "use client"
 
 import React from 'react';
-import { useRouter } from "next/navigation";
-import { ChatMessage, ChatPreview } from '@/types/chat';
+import { useParams, useRouter } from "next/navigation";
+import { useComprehensiveChat } from '@/hooks/use-chat';
+import { useUser } from '@clerk/nextjs';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import ChatInfoPanel from '@/components/chat/ChatInfoPanel';
 import ChatHeader from '@/components/chat/ChatHeader';
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger} from "@/components/ui/drawer"
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
 import CompanionProfile from './CompanionProfile';
-import { MOCK_CHAT_HISTORIES } from '@/data/messages';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ChatMobileLayoutProps {
-  currentChat: {
-    id: string;
-    name: string;
-    avatar: string;
-    description: string;
-    tags: string[];
-  } | null;
-  currentMessages: ChatMessage[];
-  chatId: string | undefined;
-  chatHistories: ChatPreview[];
+  className?: string;
 }
 
-const ChatMobileLayout = ({ 
-  currentChat, 
-  currentMessages, 
-  chatId,
-  chatHistories
-}: ChatMobileLayoutProps) => {
+const ChatMobileLayout = ({ className }: ChatMobileLayoutProps) => {
   const router = useRouter();
+  const params = useParams();
+  const chatId = params.chatId as string;
+  
+  // Handle authentication
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = user?.externalId || undefined;
+  
+  // Get chat data
+  const { getCompanionData, isLoading, error } = useComprehensiveChat({
+    enabled: isLoaded && isSignedIn && !!userId
+  });
+  
+  // Get current chat data from the comprehensive fetch
+  const companion = getCompanionData(chatId);
+
+  // Loading and error states
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-full">Loading chats…</div>;
+  }
+
+  if (error) {
+    return <div className="flex items-center justify-center h-full text-red-500">Error loading chats</div>;
+  }
+  
   // Show chat list when no conversation is selected
-  if (!chatId || !currentChat) {
-    return (
-        <ChatList chats={chatHistories} />
-    );
+  if (!chatId || !companion) {
+    return <ChatList />;
   }  
+  
   // Show chat window with info panel in a drawer
   return (
     <Drawer defaultOpen={false}>
       <div className="flex flex-col h-full">
-        <ChatHeader companion={currentChat}>
+        <ChatHeader>
           <DrawerTrigger asChild>
             <Button
               variant="ghost"
@@ -54,10 +64,7 @@ const ChatMobileLayout = ({
           </DrawerTrigger>
         </ChatHeader>
         <div className='flex-1 overflow-hidden'>
-          <ChatWindow
-            companion={currentChat}
-            initialMessages={currentMessages}
-          />
+          <ChatWindow />
         </div>
       </div>
       <DrawerContent>
@@ -65,15 +72,13 @@ const ChatMobileLayout = ({
         {/* Companion Profile */}
         <DrawerHeader>
           <DrawerTitle className='flex items-center justify-center'>
-            <CompanionProfile companion={currentChat}/>
+            <CompanionProfile />
           </DrawerTitle>
-          <DrawerDescription>{currentChat.description}</DrawerDescription>
+          <DrawerDescription>{companion.description}</DrawerDescription>
         </DrawerHeader>
         {/* Chat Info Panel */}
         <ChatInfoPanel
-          companion={currentChat}
-          chatHistories={MOCK_CHAT_HISTORIES}
-          onRestart={() => router.push(`/chat/${currentChat.id}`)}
+            onRestart={() => router.push(`/chat/${chatId}`)}
         />
         </div>
       </DrawerContent>          

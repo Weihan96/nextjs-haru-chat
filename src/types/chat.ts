@@ -1,21 +1,35 @@
+// UI-specific types for chat functionality
 
-export interface Message {
-  id: string;
-  content: string;
-  timestamp: string;
-  // From ChatMessage
-  isUser?: boolean;
-  image?: string;
-  // From ChatPreview
-  name?: string;
-  avatar?: string;
-  unread?: boolean;
-  lastMessage?: string; // Add this to avoid needing to duplicate in ChatPreview
+export interface ChatListDatum {
+  id: string
+  name: string
+  avatar: string
+  lastMessage: string
+  timestamp: string
+  unread: boolean
+  unreadCount?: number
 }
 
-export type ChatMessage = Message;
-export type ChatPreview = Pick<Message, 'id' | 'name' | 'avatar' | 'timestamp' | 'unread'> & {
-  content: string; // Keep this for type compatibility
-  lastMessage: string; // This is required for chat previews
-  unreadCount?: number; // Number of unread messages
-};
+export interface ChatMessage {
+  id: string
+  content: string
+  timestamp: string
+  isUser: boolean
+  image?: string
+}
+
+// Companion data that UI components expect
+export interface CompanionData {
+  id: string
+  name: string
+  avatar: string
+  description: string
+  tags: string[]
+}
+
+export interface ChatHistoryItem {
+  id: string;
+  title: string;
+  date: string;
+  snippet: string;
+}

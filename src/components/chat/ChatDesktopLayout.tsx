@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useComprehensiveChat } from '@/hooks/use-chat';
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { cn } from '@/lib/utils';
 import { ImperativePanelHandle } from 'react-resizable-panels';
-import { ChatMessage, ChatPreview } from '@/types/chat';
+import { useUser } from '@clerk/nextjs';
 
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
@@ -15,27 +16,24 @@ import ChatInfoPanel from './ChatInfoPanel';
 import ChatHeader from './ChatHeader';
 import CompanionProfile from './CompanionProfile';
 
-import { MOCK_CHAT_HISTORIES } from '@/data/messages';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface ChatDesktopLayoutProps {
-  currentChat: {
-    id: string;
-    name: string;
-    avatar: string;
-    description: string;
-    tags: string[];
-  } | null;
-  currentMessages: ChatMessage[];
-  chatHistories: ChatPreview[];
-}
-
-const ChatDesktopLayout = ({ 
-  currentChat, 
-  currentMessages,
-  chatHistories 
-}: ChatDesktopLayoutProps) => {
+const ChatDesktopLayout = () => {
+  const params = useParams();
+  const chatId = params.chatId as string;
   const router = useRouter();
+  
+  // Handle authentication
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = user?.externalId || undefined;
+  
+  // Get chat data
+  const { getCompanionData, isLoading, error } = useComprehensiveChat({
+    enabled: isLoaded && isSignedIn && !!userId
+  });
+  
+  // Get current chat data from the comprehensive fetch
+  const companion = getCompanionData(chatId);
 
   const ref = React.useRef<ImperativePanelHandle>(null);
 
@@ -56,20 +54,35 @@ const ChatDesktopLayout = ({
 
   const [isResizing, setIsResizing] = useState(false);
 
+  // Loading and error states
+  if (!isLoaded) {
+    return <div className="flex items-center justify-center h-full">Loading authentication…</div>;
+  }
+
+  if (!isSignedIn) {
+    return <div className="flex items-center justify-center h-full">Please sign in to access chats</div>;
+  }
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-full">Loading chats…</div>;
+  }
+
+  if (error) {
+    return <div className="flex items-center justify-center h-full text-red-500">Error loading chats</div>;
+  }
+
   return (
     <ResizablePanelGroup autoSaveId="chat-list" direction="horizontal" className="min-h-screen">
       <ResizablePanel defaultSize={25} minSize={20} maxSize={50}>
-        <ChatList chats={chatHistories} />
+        <ChatList />
       </ResizablePanel>
       
       <ResizableHandle />
       
       <ResizablePanel defaultSize={75}>
         <div className="flex flex-col h-full">
-          {currentChat && (
-            <ChatHeader 
-              companion={currentChat} 
-            >
+          {companion && (
+            <ChatHeader >
               <Button
                 variant="ghost"
                 size="icon"
@@ -82,15 +95,12 @@ const ChatDesktopLayout = ({
           )}
           <ResizablePanelGroup autoSaveId="chat-window" direction="horizontal">
             <ResizablePanel>
-              <ChatWindow
-                companion={currentChat ?? undefined}
-                initialMessages={currentMessages}
-              />
+              <ChatWindow />
             </ResizablePanel>
             
             <ResizableHandle onDragging={(e) => setIsResizing(e)}/>
             
-            {currentChat && <ResizablePanel 
+            {companion && <ResizablePanel 
               ref={ref}
               defaultSize={40} minSize={30} maxSize={60}
               collapsible={true}
@@ -103,13 +113,11 @@ const ChatDesktopLayout = ({
               
               <ScrollArea className='h-full'>
                 {/* Companion Profile */}
-                <CompanionProfile className='p-4' companion={currentChat}/>
-                <p className="px-4 text-sm font-normal text-muted-foreground">{currentChat.description}</p>
+                <CompanionProfile className='p-4' />
+                <p className="px-4 text-sm font-normal text-muted-foreground">{companion.description}</p>
                 {/* Chat Info Panel */}
                 <ChatInfoPanel
-                  companion={currentChat}
-                  chatHistories={MOCK_CHAT_HISTORIES}
-                  onRestart={() => router.push(`/chat/${currentChat.id}`)}
+                  onRestart={() => router.push(`/chat/${chatId}`)}
                 />
               </ScrollArea>
             </ResizablePanel>}

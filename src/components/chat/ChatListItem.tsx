@@ -5,25 +5,25 @@ import Link from "next/link";
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChatPreview } from '@/types/chat';
+import type { ChatListDatum } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import Image from "next/image";
 
-interface ChatItemProps {
-  chat: ChatPreview;
+interface ChatListItemProps {
+  chat: ChatListDatum;
   isSelected?: boolean;
   isActive?: boolean;
   isManageMode: boolean;
   onSelectChat?: (chatId: string) => void;
 }
 
-const ChatItem = ({ 
+const ChatListItem = ({ 
   chat, 
   isSelected = false, 
   isActive = false,
   isManageMode, 
   onSelectChat 
-}: ChatItemProps) => {
+}: ChatListItemProps) => {
   if (isManageMode) {
     return (
       <div 
@@ -38,7 +38,7 @@ const ChatItem = ({
           className="my-auto"
           onCheckedChange={() => onSelectChat && onSelectChat(chat.id)}
         />
-        <ChatItemContent chat={chat} />
+        <ChatListItemContent chat={chat} />
       </div>
     );
   }
@@ -51,13 +51,13 @@ const ChatItem = ({
         isActive && "bg-secondary/50"
       )}
     >
-      <ChatItemContent chat={chat} />
+      <ChatListItemContent chat={chat} />
     </Link>
   );
 };
 
 // Extracted the content to avoid duplication
-const ChatItemContent = ({ chat }: { chat: ChatPreview }) => {
+const ChatListItemContent = ({ chat }: { chat: ChatListDatum }) => {
   return (
     <>
       <Avatar className="h-12 w-12">
@@ -94,4 +94,4 @@ const ChatItemContent = ({ chat }: { chat: ChatPreview }) => {
   );
 };
 
-export default ChatItem;
+export default ChatListItem;

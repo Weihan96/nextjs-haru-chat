@@ -35,8 +35,14 @@ import {
 
 export function NavUser() {
   const { isMobile } = useSidebar()
-  const { user } = useUser()
-  const { data: usage } = useUsage()
+
+  // Handle authentication
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = user?.externalId || undefined;
+
+  const { data: usage } = useUsage({
+    enabled: isLoaded && isSignedIn && !!userId
+  })
 
   if (!user) {
     return null

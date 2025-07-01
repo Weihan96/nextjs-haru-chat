@@ -6,12 +6,13 @@ import type { ProfileData, UpdateProfileData } from '@/lib/actions/profile'
 /**
  * Hook to fetch user profile data
  */
-export function useProfile() {
+export function useProfile(enabled: boolean = true) {
   return useQuery({
     queryKey: ['profile', 'data'],
     queryFn: getProfile,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
+    enabled,
     retry: (failureCount, error) => {
       // Don't retry if user is not authenticated
       if (error.message.includes('not authenticated')) {
@@ -25,10 +26,14 @@ export function useProfile() {
 /**
  * Hook to fetch user usage statistics
  */
-export function useUsage() {
+export function useUsage(options?: {
+  enabled?: boolean
+}) {
+  const { enabled = true } = options || {}
   return useQuery({
     queryKey: ['profile', 'usage'],
     queryFn: getUsageStats,
+    enabled,
     staleTime: 1000 * 60 * 2, // 2 minutes (more frequent updates for usage)
     gcTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error) => {

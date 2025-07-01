@@ -1,13 +1,17 @@
-"use client"
+"use client";
 
-
-import * as React from "react"
+import * as React from "react";
 import {
   GalleryVerticalEnd,
-  Home, MessageSquare, Star, User
-} from "lucide-react"
+  Home,
+  LogIn,
+  MessageSquare,
+  Star,
+  User,
+  UserPlus,
+} from "lucide-react";
 
-import { NavUser } from "@/components/layout/nav-user"
+import { NavUser } from "@/components/layout/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -19,20 +23,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  useSidebar
-} from "@/components/ui/sidebar"
-import { useIsMobile } from "@/hooks/use-mobile"
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import { SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 
 // This is sample data.
 const data = {
-  brand: 
-    {
-      name: "HaruChat AI",
-      logo: GalleryVerticalEnd,
-    },
+  brand: {
+    name: "HaruChat AI",
+    logo: GalleryVerticalEnd,
+  },
   nav: [
     {
       name: "Home",
@@ -55,11 +59,12 @@ const data = {
       icon: User,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { toggleSidebar } = useSidebar();
-  
+  const pathname = usePathname();
+
   return (
     <Sidebar collapsible="icon" className="z-[60] ease-out" {...props}>
       <SidebarHeader>
@@ -89,9 +94,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {data.nav.map((item) => (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
-                  tooltip={item.name}
+                    tooltip={item.name}
                     asChild
-                    isActive={item.name === "Home"}
+                    isActive={item.url === pathname}
                   >
                     <Link href={item.url}>
                       {item.icon && <item.icon />}
@@ -105,30 +110,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser />
+        <SignedOut>
+          <SignUpButton mode="modal">
+            <SidebarMenuButton className="bg-sidebar-primary text-sidebar-primary-foreground w-full shadow-none hover:bg-sidebar-primary/80 hover:text-sidebar-primary-foreground/80 cursor-pointer justify-center group-data-[state=collapsed]:justify-start">
+              <LogIn />
+              <span>Sign up</span>
+            </SidebarMenuButton>
+          </SignUpButton>
+        </SignedOut>
+        <SignedIn>
+          <NavUser />
+        </SignedIn>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
 
 export function MobileNavbar() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  
+
   // Check if we are on a main route (not a nested page)
-  const isMainRoute = 
-    pathname === '/' || 
-    pathname === '/chat' ||
-    pathname === '/collections' ||
-    pathname === '/me';
+  const isMainRoute =
+    pathname === "/" ||
+    pathname === "/chat" ||
+    pathname === "/collections" ||
+    pathname === "/me";
 
   if (!isMobile || !isMainRoute) {
     return null;
   }
   return (
     <>
-      <div className="h-[56px]"/>
+      <div className="h-[56px]" />
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-[55]">
         <nav className="flex justify-around items-center">
           {data.nav.map((item) => (
@@ -137,8 +152,8 @@ export function MobileNavbar() {
               href={item.url}
               className={cn(
                 "flex flex-col items-center p-2 text-sm rounded-md transition-colors",
-                pathname === item.url 
-                  ? "text-primary" 
+                pathname === item.url
+                  ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -149,5 +164,5 @@ export function MobileNavbar() {
         </nav>
       </div>
     </>
-  )
+  );
 }

@@ -55,7 +55,7 @@ const ChatHeader = ({
               <ArrowLeft size={20} />
             </Button>
           )}
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-9 w-9">
             <Image src={companion.avatar} alt={companion.name} className="object-cover" width={40} height={40} />
           </Avatar>
           <h2 className="font-medium">{companion.name}</h2>

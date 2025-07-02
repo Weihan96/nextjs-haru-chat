@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Link, MoreVertical, Settings } from "lucide-react";
+import { MoreVertical, Settings } from "lucide-react";
+import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
@@ -45,6 +46,7 @@ const ChatListItem = ({ chat, isActive = false }: ChatListItemProps) => {
     </Link>
   );
 };
+
 interface ChatListProps {
   className?: string;
 }

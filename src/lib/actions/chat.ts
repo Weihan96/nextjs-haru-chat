@@ -1,8 +1,8 @@
 'use server'
 
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
+
 
 // Types for comprehensive chat data
 export interface ComprehensiveChatData {
@@ -13,6 +13,7 @@ export interface ComprehensiveChatData {
     name: string
     imageUrl: string | null
     description: string | null
+    startMessage: string
     tags: Array<{ tag: { name: string } }>
   }
   recentMessages: Array<{
@@ -24,6 +25,7 @@ export interface ComprehensiveChatData {
   }>
   lastMessageAt: Date
   messageCount: number
+  createdAt: Date
 }
 
 
@@ -92,6 +94,7 @@ export async function getComprehensiveChatData(page = 0): Promise<{
             name: true,
             imageUrl: true,
             description: true,
+            startMessage: true,
             tags: {
               include: {
                 tag: {
@@ -143,6 +146,7 @@ export async function getComprehensiveChatData(page = 0): Promise<{
         name: chat.companion.name,
         imageUrl: chat.companion.imageUrl,
         description: chat.companion.description,
+        startMessage: chat.companion.startMessage,
         tags: chat.companion.tags
       },
       recentMessages: chat.messages.map(msg => ({
@@ -153,7 +157,8 @@ export async function getComprehensiveChatData(page = 0): Promise<{
         attachments: msg.attachments
       })),
       lastMessageAt: chat.updatedAt,
-      messageCount: chat._count.messages
+      messageCount: chat._count.messages,
+      createdAt: chat.createdAt
     }))
 
     return {
@@ -307,6 +312,72 @@ export async function getChatCompanion(chatId: string) {
       debug: {
         originalError: error instanceof Error ? error.message : 'Unknown error',
         chatId,
+        timestamp: new Date().toISOString()
+      }
+    }))
+  }
+}
+
+// Start chat with companion - finds existing or creates new chat
+export async function startChat(companionId: string): Promise<{ chatId: string }> {
+  try {
+    // Get database user ID from Clerk
+    const userId = await getUserIdFromAuth()
+
+    // First, check if a chat already exists between this user and companion
+    let existingChat = await prisma.chat.findFirst({
+      where: {
+        userId: userId,
+        companionId: companionId,
+        isDeleted: false
+      },
+      select: { id: true }
+    })
+
+    // If chat exists, return its ID
+    if (existingChat) {
+      return { chatId: existingChat.id }
+    }
+
+    // Verify the companion exists before creating a chat
+    const companion = await prisma.companion.findUnique({
+      where: { id: companionId },
+      select: { 
+        id: true,
+        startMessage: true
+      }
+    })
+
+    if (!companion) {
+      throw new Error(JSON.stringify({
+        message: 'Companion not found',
+        debug: { 
+          companionId, 
+          userId: userId, 
+          timestamp: new Date().toISOString() 
+        }
+      }))
+    }
+
+
+    const newChat = await prisma.chat.create({
+      data: {
+        userId: userId,
+        companionId: companionId,
+        isDeleted: false
+      },
+      select: { id: true }
+    })
+
+    return { chatId: newChat.id }
+
+  } catch (error) {
+    console.error('🔴 startChat error:', error)
+    throw new Error(JSON.stringify({
+      message: 'Failed to start chat',
+      debug: {
+        originalError: error instanceof Error ? error.message : 'Unknown error',
+        companionId,
         timestamp: new Date().toISOString()
       }
     }))

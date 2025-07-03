@@ -1,22 +1,16 @@
 "use client"
 
 import React, { useEffect, useRef } from 'react';
-import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bookmark, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useComprehensiveChat, useInfiniteChatMessages } from '@/hooks/use-chat';
 import { ChatMessage } from '@/types/chat';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ChatInput from './ChatInput';
-import Image from "next/image";
+import ChatBubble from './ChatBubble';
 import { useParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { Textarea } from '@/components/ui/textarea';
-import { Send } from 'lucide-react';
 
 // LoadMoreAnchor component for auto-loading more messages when in viewport
 const LoadMoreAnchor: React.FC<{ 
@@ -101,14 +95,18 @@ const ChatWindow = ({
   const userId = user?.externalId || undefined;
   
   // Get companion and recent messages from comprehensive hook (always call hooks)
-  const { getCompanionData, getRecentMessages } = useComprehensiveChat({
+  const { getCompanionData, getRecentMessages, getChatData } = useComprehensiveChat({
     enabled: isLoaded && isSignedIn && !!userId && !!chatId
   });
+  
+  // Get companion data and chat data
+  const companion = getCompanionData(chatId);
+  const chatData = getChatData(chatId);
   
   // Call infinite messages hook conditionally but safely
   const shouldFetchMessages = !!chatId && isLoaded && isSignedIn && !!userId;
   const {
-    data: messages,
+    data: actualMessages,
     isLoading,
     error,
     hasNextPage,
@@ -126,6 +124,34 @@ const ChatWindow = ({
     })() : undefined
   });
   
+  // Inject start message when we've loaded all messages (hasNextPage is false)
+  const messages = (() => {
+    if (!hasNextPage && companion && chatData) {
+      const startMessage: ChatMessage = {
+        id: `start-message-${chatId}`,
+        content: companion.startMessage,
+        timestamp: chatData.createdAt.toISOString(),
+        isUser: false,
+        image: undefined
+      };
+      
+      // Add start message at the beginning if not already present
+      if (actualMessages.length === 0 || actualMessages[0]?.id !== startMessage.id) {
+        return [startMessage, ...actualMessages];
+      }
+    }
+    
+    return actualMessages;
+  })();
+
+  const handleSendMessage = (input: string) => {
+    if (input.trim() && companion) {
+      // TODO: Implement actual message sending via mutation
+      // For now, just show optimistic update
+      console.log('Sending message:', input);
+    }
+  };
+
   // Early return for no chat selected (desktop only)
   if (!chatId) {
     if(isMobile) return null;
@@ -140,16 +166,6 @@ const ChatWindow = ({
       </div>
     );
   }
-  
-  const companion = getCompanionData(chatId);
-
-  const handleSendMessage = (input: string) => {
-    if (input.trim() && companion) {
-      // TODO: Implement actual message sending via mutation
-      // For now, just show optimistic update
-      console.log('Sending message:', input);
-    }
-  };
 
   // No companion found
   if (!companion) {
@@ -166,6 +182,7 @@ const ChatWindow = ({
     );
   }
 
+  // Show loading spinner
   if (isLoading) {
     return (
       <div className={cn("flex flex-col h-full items-center justify-center", className)}>
@@ -188,53 +205,24 @@ const ChatWindow = ({
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="space-y-4 p-4">
-            {/* Auto-load more messages when in viewport */}
-            <LoadMoreAnchor 
+            {/* Auto-load more messages when in viewport (only if we have enough messages) */}
+            {messages.length >= 10 && (
+              <LoadMoreAnchor 
               hasNextPage={hasNextPage}
               isFetchingNextPage={isFetchingNextPage}
               fetchNextPage={fetchNextPage}
-            />
+              />
+            )}
 
-            {/* Messages */}
+            {/* Messages using ChatBubble component */}
             {messages.map((message) => (
-              <div
+              <ChatBubble
                 key={message.id}
-                className={cn(
-                  "chat-bubble",
-                  message.isUser ? "chat-bubble-user" : "chat-bubble-ai"
-                )}
-              >
-                <div className="flex gap-2">
-                  {!message.isUser && (
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      <Image src={companion.avatar} alt={companion.name} className="object-cover" width={32} height={32}/>
-                    </Avatar>
-                  )}
-                  <div className="flex-1 space-y-1 overflow-hidden">
-                    <div className="whitespace-pre-wrap break-all max-w-80vw md:max-w-65vw">
-                      {message.content}
-                    </div>
-                    
-                    {message.image && (
-                      <div className="mt-2 relative">
-                        <Image
-                          src={message.image}
-                          alt="Shared content"
-                          className="rounded-md max-w-full" width={500} height={300} />
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
-                      {!message.isUser && (
-                        <Button variant="ghost" size="sm" className="h-6 w-6 rounded-full p-0">
-                          <Bookmark size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                message={message}
+                companionAvatar={companion.avatar}
+                companionName={companion.name}
+                isUnread={false} // Will be true for real-time messages later
+                />
             ))}
             
             <ScrollToBottomAnchor messages={messages} />
@@ -247,4 +235,4 @@ const ChatWindow = ({
   );
 };
 
-export default ChatWindow; 
+export default ChatWindow;

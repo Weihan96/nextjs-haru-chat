@@ -1,13 +1,17 @@
 "use client"
 
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageSquare } from 'lucide-react';
-import Link from "next/link";
 import { cn } from '@/lib/utils';
 import Image from "next/image";
+import { useMutation } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { startChat } from '@/lib/actions/chat';
+import { useQueryClient } from '@tanstack/react-query';
+
 interface CompanionCardProps {
   id: string;
   name: string;
@@ -30,11 +34,45 @@ const CompanionCard = ({
   className
 }: CompanionCardProps) => {
   const [isLiked, setIsLiked] = React.useState(false);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const startChatMutation = useMutation({
+    mutationFn: (companionId: string) => startChat(companionId),
+    onSuccess: (data) => {
+      // Invalidate comprehensive chat data to reflect new/updated chat
+      queryClient.invalidateQueries({ queryKey: ['chats', 'comprehensive'] }).then(() => {
+        router.push(`/chat/${data.chatId}`);
+      });
+    },
+    onError: (error) => {
+      let errorMessage = 'An unexpected error occurred'
+      let debugInfo = error.message
+
+      try {
+        const errorData = JSON.parse(error.message)
+        errorMessage = errorData.message || errorMessage
+        debugInfo = errorData.debug
+      } catch {
+        // Use default message for non-JSON errors
+      }
+
+      console.error('🔴 Start chat error:', debugInfo)
+      toast.error('Failed to start chat', {
+        description: errorMessage,
+        duration: Infinity
+      })
+    }
+  });
 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsLiked(!isLiked);
+  };
+
+  const handleStartChat = () => {
+    startChatMutation.mutate(id);
   };
   
   return (
@@ -90,12 +128,14 @@ const CompanionCard = ({
               <span>{messages}</span>
             </div>
           </div>
-          
-          <Link href={`/chat/${id}`}>
-            <Button size="sm" className="bg-primary hover:bg-primary/90">
-              Chat
+          <Button 
+            size="sm" 
+            className="bg-primary hover:bg-primary/90"
+            onClick={handleStartChat}
+            disabled={startChatMutation.isPending||startChatMutation.isSuccess}
+          >
+            {startChatMutation.isPending ? 'Starting...' : startChatMutation.isSuccess ? 'Redirecting...' : 'Chat'}
             </Button>
-          </Link>
         </div>
       </div>
     </div>

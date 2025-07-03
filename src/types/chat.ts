@@ -24,6 +24,7 @@ export interface CompanionData {
   name: string
   avatar: string
   description: string
+  startMessage: string
   tags: string[]
 }
 

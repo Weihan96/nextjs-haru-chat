@@ -12,7 +12,7 @@ function transformToChatListData(chats: ComprehensiveChatData[]): ChatListDatum[
     id: chat.id,
     name: chat.companion.name,
     avatar: chat.companion.imageUrl || '/placeholder-avatar.png',
-    lastMessage: chat.recentMessages[0]?.content || 'No messages yet',
+    lastMessage: chat.recentMessages[0]?.content || chat.companion.startMessage, // If no messages, show the start message
     timestamp: chat.recentMessages[0]?.createdAt.toISOString() || chat.lastMessageAt.toISOString(),
     unread: false, // TODO: Implement unread logic
     unreadCount: 0, // TODO: Implement unread count
@@ -26,6 +26,7 @@ function transformToCompanionData(companion: ComprehensiveChatData['companion'])
     name: companion.name,
     avatar: companion.imageUrl ?? '/placeholder-avatar.png',
     description: companion.description ?? '',
+    startMessage: companion.startMessage,
     tags: companion.tags.map(ct => ct.tag.name)
   }
 }

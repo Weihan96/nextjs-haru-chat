@@ -9,6 +9,7 @@ import {
   Star,
   User,
   UserPlus,
+  Sparkles,
 } from "lucide-react";
 
 import { NavUser } from "@/components/layout/nav-user";
@@ -52,6 +53,11 @@ const data = {
       name: "Collections",
       url: "/collections",
       icon: Star,
+    },
+    {
+      name: "Demo Kit",
+      url: "/chatbot-kit",
+      icon: Sparkles,
     },
     {
       name: "Me",
@@ -136,6 +142,7 @@ export function MobileNavbar() {
     pathname === "/" ||
     pathname === "/chat" ||
     pathname === "/collections" ||
+    pathname === "/chatbot-kit" ||
     pathname === "/me";
 
   if (!isMobile || !isMainRoute) {

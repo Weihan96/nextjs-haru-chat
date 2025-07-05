@@ -165,4 +165,18 @@
   .animate-bubble-pop {
     animation: bubble-pop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
+
+  /* Typing indicator animation for chat */
+  @keyframes typing-dot-bounce {
+    0%,40% { 
+      transform: translateY(0); 
+    }
+    20% { 
+      transform: translateY(-0.25rem); 
+    }
+  }
+
+  .animate-typing-dot-bounce {
+    animation: typing-dot-bounce 1.25s ease-out infinite;
+  }
 }

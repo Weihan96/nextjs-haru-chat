@@ -280,4 +280,138 @@ catch (error) {
     }
   }))
 }
-``` 
+```
+
+## Safety Rules & Command Restrictions
+
+### 🚨 BANNED COMMANDS - NEVER RUN THESE
+These commands are PROHIBITED and must never be executed:
+
+#### Dangerous Git Commands
+- `git reset --hard` - Can permanently lose work
+- `git clean -fd` - Permanently deletes files
+- `git branch -D` - Force deletes branches
+- `git push --force` - Can overwrite remote history
+- `git rebase -i` without explicit approval
+- `git filter-branch` - Can destroy repository history
+
+#### Dangerous System Commands
+- `rm -rf` - Permanently deletes files/directories
+- `sudo rm` - System-level file deletion
+- `chmod 777` - Dangerous permission changes
+- `chown -R` - Ownership changes without context
+- `kill -9` - Force killing processes
+- `pkill` - Mass process termination
+
+#### File System Operations
+- `mv` on important config files without backup
+- `cp` overwriting existing files without confirmation
+- `find -delete` - Mass file deletion
+- `xargs rm` - Batch file removal
+
+### 🚫 BANNED DEVELOPMENT COMMANDS
+
+#### Git Operations
+- **NEVER run `git add`** - User must review and stage changes manually
+- **NEVER run `git commit`** - All commits must be approved by user first
+- **NEVER run `git push`** - User must explicitly push changes
+- **NEVER run `git merge`** - User must handle merges manually
+- **NEVER run `git rebase`** - User must handle rebases manually
+
+#### Development Server
+- **NEVER run `bun dev`** - Development server is always running
+- **NEVER run `npm run dev`** - Development server is always running
+- **NEVER run `yarn dev`** - Development server is always running
+- **NEVER run `next dev`** - Development server is always running
+
+### ✅ APPROVED ALTERNATIVES
+
+#### Instead of Starting Dev Server
+- **ASK USER**: "Please check your terminal - is the dev server running?"
+- **SUGGEST**: "Please visit http://localhost:3000 or check the port shown in your terminal"
+- **RECOMMEND**: "Run tests with `bun test` to verify functionality"
+
+#### Instead of Dangerous Git Commands
+- **USE**: `git status` to check current state
+- **USE**: `git log --oneline -5` to see recent commits
+- **USE**: `git diff` to see changes
+- **USE**: `git stash` to temporarily save changes
+- **ASK USER**: "Please review the changes and stage them with `git add` if you approve"
+- **ASK USER**: "Do you want me to prepare a commit message for these changes?"
+
+#### Instead of File Operations
+- **USE**: `ls -la` to list files
+- **USE**: `cat` or `read_file` to view file contents
+- **USE**: `grep` to search within files
+- **ASK USER**: "Should I create/modify this file?"
+
+### 🔍 SAFE EXPLORATION COMMANDS
+These commands are safe to use for gathering information:
+
+```bash
+# Git information
+git status
+git log --oneline -10
+git diff
+git branch -a
+git remote -v
+
+# File system exploration
+ls -la
+pwd
+find . -name "*.ts" -type f
+grep -r "pattern" src/
+
+# Process information
+ps aux | grep node
+lsof -i :3000
+netstat -tulpn | grep :3000
+
+# Package information
+bun --version
+node --version
+cat package.json
+```
+
+### 📋 WORKFLOW GUIDELINES
+
+#### Before Making Changes
+1. **ALWAYS** run `git status` to check current state
+2. **ALWAYS** use `git diff` to see what changed
+3. **NEVER** commit automatically - ask user first
+
+#### When User Requests Dev Server
+1. **ASK**: "Please check your terminal - is the dev server already running?"
+2. **SUGGEST**: "Visit http://localhost:3000 (or the port shown in your terminal)"
+3. **ALTERNATIVE**: "Run `bun test` to verify the application works"
+
+#### When User Requests Commits
+1. **PREPARE** commit message following conventional commit format
+2. **SHOW** user the changes with `git diff`
+3. **ASK**: "Please review the changes and run `git add` for files you want to stage"
+4. **ASK**: "Should I commit the staged changes with message: 'feat: ...'?"
+5. **WAIT** for explicit user approval before running `git commit`
+
+#### Error Recovery
+1. **NEVER** use `git reset --hard` - suggest alternatives
+2. **SUGGEST** `git stash` to save changes temporarily
+3. **RECOMMEND** `git checkout -- filename` for individual file resets
+4. **ASK USER** before any destructive operations
+
+### 🎯 DEVELOPMENT BEST PRACTICES
+
+#### Testing Instead of Dev Server
+- Use `bun test` to run tests
+- Use `bun run build` to verify build works
+- Use `bun run lint` to check code quality
+- Use `bun run type-check` to verify TypeScript
+
+#### Safe Development Workflow
+1. Make code changes using `edit_file` or `search_replace`
+2. Run `git status` and `git diff` to review changes
+3. Run `bun test` to verify functionality
+4. Ask user to review and stage changes with `git add`
+5. Prepare commit message for user approval
+6. Wait for user to commit and test in browser
+
+This ensures a safe development environment while maintaining full functionality and user control.

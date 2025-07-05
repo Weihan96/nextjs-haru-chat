@@ -19,6 +19,7 @@ const MODELS = [
   { id: "gpt-4o", name: "GPT-4o" },
   { id: "gpt-4", name: "GPT-4" },
   { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
+  { id: "runpod", name: "Runpod MN-12B-Mag-Mell-R1" },
 ]
 
 type ChatDemoProps = {

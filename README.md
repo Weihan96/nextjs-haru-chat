@@ -84,22 +84,7 @@ DIRECT_URL="your-direct-database-url"
 3. Check your server logs for the webhook
 4. Verify the user data was synced to your database
 
-### 4. Manual User Sync (Optional)
-
-If you already have users in Clerk before implementing webhooks, you can manually sync them:
-
-```typescript
-// This is a server action - can be called from a page or API route
-import { syncExistingUsers, syncSingleUser } from '@/src/lib/actions/user-sync'
-
-// Sync all existing users
-await syncExistingUsers()
-
-// Or sync a specific user by Clerk ID
-await syncSingleUser('user_xxxxxxxxxx')
-```
-
-### 5. Webhook Events Handled
+### 4. Webhook Events Handled
 
 | Event | Description | Action |
 |-------|-------------|--------|
@@ -107,7 +92,7 @@ await syncSingleUser('user_xxxxxxxxxx')
 | `user.updated` | User profile updated | Updates user record in database |
 | `user.deleted` | User account deleted | Removes user record from database |
 
-### 6. Development with ngrok
+### 5. Development with ngrok
 
 For local development with webhooks:
 
@@ -117,7 +102,7 @@ For local development with webhooks:
 4. Use this URL + `/api/webhooks` as your webhook endpoint in Clerk Dashboard
 5. The webhook will now forward to your local development server
 
-### 7. Production Deployment
+### 6. Production Deployment
 
 When deploying to production:
 
@@ -130,6 +115,86 @@ When deploying to production:
 - **Webhook verification failed**: Check that your `CLERK_WEBHOOK_SIGNING_SECRET` is correct
 - **User not created**: Check your database logs and ensure your DATABASE_URL is correct
 - **Webhook not received**: Verify the endpoint URL is accessible and using HTTPS in production
+
+## RunPod Integration (Self-Hosted LLM)
+
+This app supports RunPod's serverless GPU infrastructure for self-hosted Large Language Models using OpenAI-compatible API endpoints.
+
+### Features
+
+- 🤖 **Self-Hosted LLM Support** - Run your own models on RunPod's GPU infrastructure
+- 🔄 **Real-time Streaming** - Token-by-token streaming using OpenAI-compatible format
+- 🛠️ **Simple Integration** - Uses standard OpenAI client with custom endpoint
+- ⚡ **Optimized Model** - Pre-configured for `inflatebot/MN-12B-Mag-Mell-R1` conversational model
+
+### Environment Variables
+
+Add these to your `.env.local` file:
+
+```env
+# RunPod Configuration (Optional - for self-hosted models)
+RUNPOD_ENDPOINT_ID=your_endpoint_id
+RUNPOD_API_KEY=rpa_xxxxxxxxxx
+
+# OpenAI (Required for OpenAI models)
+OPENAI_API_KEY=sk-xxxxxxxxxx
+```
+
+### Setup
+
+1. **Create RunPod Serverless Endpoint**
+   - Go to [RunPod Console](https://www.runpod.io/console/serverless)
+   - Create a new serverless endpoint with vLLM worker
+   - Use the `inflatebot/MN-12B-Mag-Mell-R1` model for best results
+
+2. **Configure Environment Variables**
+   - Copy your endpoint ID from the RunPod console
+   - Copy your API key from RunPod account settings
+   - Add both to your `.env.local` file
+
+3. **Test Integration**
+   - Start your development server: `bun dev`
+   - In the chat interface, select "RunPod Self-Hosted LLM" from the model dropdown
+   - Send a test message to verify the integration works
+
+### Usage
+
+The RunPod provider is automatically available in the chat interface when properly configured. Users can switch between:
+
+- **OpenAI Models**: GPT-4, GPT-3.5-turbo, etc.
+- **RunPod Self-Hosted**: Your custom model running on RunPod infrastructure
+
+### Technical Details
+
+- **API Endpoint**: `https://api.runpod.ai/v2/{ENDPOINT_ID}/openai/v1/chat/completions`
+- **Streaming**: Real token-by-token streaming (not polling-based)
+- **Error Handling**: Built-in OpenAI SDK error handling
+- **Model**: Optimized for `inflatebot/MN-12B-Mag-Mell-R1` conversational model
+- **vLLM Compatibility**: Uses RunPod's vLLM workers with full OpenAI API compatibility
+
+### Supported API Endpoints
+
+RunPod's vLLM workers support these OpenAI-compatible endpoints:
+
+| Endpoint | Description | Status |
+|----------|-------------|---------|
+| `/chat/completions` | Generate chat model completions | Fully supported |
+| `/completions` | Generate text completions | Fully supported |
+| `/models` | List available models | Supported |
+
+### Troubleshooting
+
+- **Provider not available**: Ensure `RUNPOD_ENDPOINT_ID` and `RUNPOD_API_KEY` are set
+- **Connection errors**: Verify your RunPod endpoint is active and running
+- **Streaming issues**: Check that your endpoint supports OpenAI-compatible streaming
+- **Invalid model error**: Verify your model name matches what you deployed
+- **Authentication error**: Check that you're using your RunPod API key, not an OpenAI key
+
+### Resources
+
+- **Official Documentation**: [RunPod OpenAI Compatibility Guide](https://docs.runpod.io/serverless/vllm/openai-compatibility)
+- **Provider Code**: [`src/lib/providers/runpod-vllm.ts`](src/lib/providers/runpod-vllm.ts)
+- **RunPod Console**: [Create Serverless Endpoint](https://www.runpod.io/console/serverless)
 
 ## Learn More
 
